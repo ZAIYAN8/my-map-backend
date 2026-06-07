@@ -72,7 +72,6 @@
         try {
             const res = await fetch('/api/admin/points', { credentials: 'include' });
             if (res.status === 401) {
-                // 未登录，跳转到登录页
                 window.location.href = '/login';
                 return;
             }
@@ -80,7 +79,6 @@
             renderTable(points);
         } catch (err) {
             console.error('加载失败', err);
-            showStatus('加载数据失败', 'error');
         }
     }
 
@@ -130,7 +128,7 @@
         });
         const data = await res.json();
         if (res.ok) return data.image_url;
-        else throw new Error(data.error || '上传失败');
+        else throw new Error(data.error);
     }
 
     async function savePoint(data, mode, id = null) {
@@ -146,28 +144,18 @@
             body: JSON.stringify(data),
             credentials: 'include'
         });
-        if (!res.ok) {
-            if (res.status === 401) {
-                window.location.href = '/login';
-                throw new Error('未登录');
-            }
-            throw new Error('保存失败');
-        }
+        if (!res.ok) throw new Error('保存失败');
         return await res.json();
     }
 
     async function deletePoint(id) {
         if (confirm('确定删除该点位吗？')) {
-            const res = await fetch(`/api/admin/points/${id}`, {
+            await fetch(`/api/admin/points/${id}`, {
                 method: 'DELETE',
                 credentials: 'include'
             });
-            if (res.ok) {
-                showStatus('删除成功', 'success');
-                fetchPoints();
-            } else {
-                showStatus('删除失败', 'error');
-            }
+            showStatus('删除成功', 'success');
+            fetchPoints();
         }
     }
 
@@ -250,7 +238,7 @@
         }
     };
 
-    document.getElementById('refreshBtn').onclick = () => fetchPoints();
+    document.getElementById('refreshBtn').onclick = fetchPoints;
     fetchPoints();
 </script>
 </body>
