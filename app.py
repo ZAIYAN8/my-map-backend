@@ -8,29 +8,25 @@ from werkzeug.utils import secure_filename
 from qiniu import Auth, put_file
 from dotenv import load_dotenv
 
-load_dotenv()  # 加载 .env 文件中的环境变量（本地开发用）
+load_dotenv()
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True)  # 允许跨域携带 cookie
+CORS(app, supports_credentials=True)
 
-# ========== 安全配置 ==========
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 ADMIN_USER = os.environ.get('ADMIN_USER', 'admin')
 ADMIN_PASS = os.environ.get('ADMIN_PASS', 'admin123')
 
-# ========== 上传配置 ==========
 UPLOAD_FOLDER = 'images'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# ========== 七牛云配置（从环境变量读取） ==========
 QINIU_ACCESS_KEY = os.environ.get('QINIU_ACCESS_KEY')
 QINIU_SECRET_KEY = os.environ.get('QINIU_SECRET_KEY')
 QINIU_BUCKET_NAME = os.environ.get('QINIU_BUCKET_NAME')
 QINIU_BASE_URL = os.environ.get('QINIU_BASE_URL')
 
-# ========== 数据库配置 ==========
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL environment variable not set")
@@ -41,16 +37,14 @@ def get_db_connection():
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# ========== 登录认证装饰器 ==========
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get('logged_in'):
-            abort(401, description="Unauthorized")
+            abort(401)
         return f(*args, **kwargs)
     return decorated_function
 
-# ========== 登录/登出 ==========
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -61,7 +55,6 @@ def login():
             return redirect('/admin.html')
         else:
             return '<h1>用户名或密码错误</h1><a href="/login">返回登录</a>', 401
-    # GET 显示登录表单
     return '''
         <!DOCTYPE html>
         <html>
@@ -82,7 +75,6 @@ def logout():
     session.pop('logged_in', None)
     return redirect('/login')
 
-# ========== 公开接口（地图数据） ==========
 @app.route('/api/points')
 def get_points():
     conn = get_db_connection()
@@ -114,7 +106,6 @@ def get_points():
     conn.close()
     return jsonify(geojson)
 
-# ========== 管理后台 API（全部需要登录） ==========
 @app.route('/api/admin/points', methods=['GET'])
 @admin_required
 def admin_get_points():
@@ -158,8 +149,7 @@ def add_point():
 
 @app.route('/api/admin/points/<int:point_id>', methods=['PUT'])
 @admin_required
-def update_point(
-    point_id):
+def update_point(point_id):
     data = request.json
     conn = get_db_connection()
     cur = conn.cursor()
@@ -184,7 +174,6 @@ def delete_point(point_id):
     conn.close()
     return jsonify({'message': '删除成功'})
 
-# ========== 图片上传到七牛云（需要登录） ==========
 @app.route('/api/upload', methods=['POST'])
 @admin_required
 def upload_image():
@@ -214,7 +203,6 @@ def upload_image():
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
-# ========== 静态文件服务 ==========
 @app.route('/')
 def index():
     return send_from_directory('.', 'portal.html') if os.path.exists('portal.html') else redirect('/map.html')
@@ -231,7 +219,6 @@ def admin_page():
 
 @app.route('/<path:filename>')
 def serve_static(filename):
-    # 禁止直接访问 admin.html 以外的敏感文件（但允许 css/js 等）
     if filename == 'admin.html':
         abort(403)
     if filename.endswith('.html') or filename.endswith('.js') or filename.endswith('.css'):
@@ -239,6 +226,5 @@ def serve_static(filename):
     else:
         abort(403)
 
-# ========== 启动服务 ==========
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
