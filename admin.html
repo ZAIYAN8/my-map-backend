@@ -128,7 +128,7 @@
         });
         const data = await res.json();
         if (res.ok) return data.image_url;
-        else throw new Error(data.error);
+        else throw new Error(data.error || '上传失败');
     }
 
     async function savePoint(data, mode, id = null) {
