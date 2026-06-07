@@ -66,14 +66,22 @@
 </div>
 
 <script>
-    const API_BASE = 'http://localhost:5000/api/admin/points';
-    const UPLOAD_URL = 'http://localhost:5000/api/upload';
+    // 使用相对路径，不再定义 API_BASE 和 UPLOAD_URL
     let currentMode = 'add';
 
     async function fetchPoints() {
-        const res = await fetch(API_BASE);
-        const points = await res.json();
-        renderTable(points);
+        try {
+            const res = await fetch('/api/admin/points');
+            if (res.status === 401) {
+                // 未登录，跳转到登录页
+                window.location.href = '/login';
+                return;
+            }
+            const points = await res.json();
+            renderTable(points);
+        } catch (err) {
+            console.error('加载失败', err);
+        }
     }
 
     function renderTable(points) {
@@ -88,7 +96,6 @@
             const imgCell = row.insertCell(4);
             if (p.image_url) {
                 const img = document.createElement('img');
-                // 直接使用完整的 URL（可能是七牛云或其他绝对路径）
                 img.src = p.image_url;
                 img.className = 'preview';
                 img.onerror = () => { img.src = ''; img.alt = '加载失败'; };
@@ -116,17 +123,17 @@
     async function uploadImage(file) {
         const formData = new FormData();
         formData.append('file', file);
-        const res = await fetch(UPLOAD_URL, { method: 'POST', body: formData });
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
         const data = await res.json();
         if (res.ok) return data.image_url;
         else throw new Error(data.error);
     }
 
     async function savePoint(data, mode, id = null) {
-        let url = API_BASE;
+        let url = '/api/admin/points';
         let method = 'POST';
         if (mode === 'edit') {
-            url = `${API_BASE}/${id}`;
+            url = `/api/admin/points/${id}`;
             method = 'PUT';
         }
         const res = await fetch(url, {
@@ -140,7 +147,7 @@
 
     async function deletePoint(id) {
         if (confirm('确定删除该点位吗？')) {
-            await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+            await fetch(`/api/admin/points/${id}`, { method: 'DELETE' });
             showStatus('删除成功', 'success');
             fetchPoints();
         }

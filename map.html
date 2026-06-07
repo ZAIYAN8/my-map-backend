@@ -49,8 +49,7 @@
 </div>
 
 <script>
-    const API_BASE = 'http://localhost:5000';
-    
+    // 不再定义 API_BASE，使用相对路径
     var map = L.map('map').setView([25.78912, 100.195062], 10);
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Esri'
@@ -60,13 +59,12 @@
 
     async function loadPoints() {
         try {
-            const res = await fetch(API_BASE + '/api/points');
+            const res = await fetch('/api/points');
             const data = await res.json();
             markersLayer.clearLayers();
             data.features.forEach(feature => {
                 const props = feature.properties;
                 const coords = feature.geometry.coordinates;
-                // GeoJSON 坐标顺序是 [经度, 纬度]
                 const marker = L.marker([coords[1], coords[0]]).addTo(markersLayer);
                 marker.on('click', () => {
                     showInfo(props);
@@ -81,21 +79,29 @@
         const panel = document.getElementById('infoPanel');
         const content = document.getElementById('panelContent');
         let imgUrl = props.image_url || '';
-        // 如果 URL 不是以 http 开头，则视为相对路径，拼接 API_BASE
-        if (imgUrl && !imgUrl.startsWith('http')) {
-            imgUrl = API_BASE + imgUrl;
-        }
+        // 数据库中存储的 image_url 已经是完整的七牛云 URL，无需拼接
         content.innerHTML = `
-            <h3>${props.name || '未命名'}</h3>
+            <h3>${escapeHtml(props.name) || '未命名'}</h3>
             ${imgUrl ? `<img src="${imgUrl}" alt="图片" onerror="this.onerror=null;this.src='';this.alt='图片加载失败'">` : ''}
-            <p>${props.description || '暂无描述'}</p>
-            <small>${props.city ? props.city + '，' : ''}${props.province || ''}</small>
+            <p>${escapeHtml(props.description) || '暂无描述'}</p>
+            <small>${escapeHtml(props.city) ? escapeHtml(props.city) + '，' : ''}${escapeHtml(props.province) || ''}</small>
         `;
         panel.style.display = 'block';
     }
 
     function closePanel() {
         document.getElementById('infoPanel').style.display = 'none';
+    }
+
+    // 简单的防XSS
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
     }
 
     loadPoints();

@@ -158,7 +158,8 @@ def add_point():
 
 @app.route('/api/admin/points/<int:point_id>', methods=['PUT'])
 @admin_required
-def update_point(point_id):
+def update_point(
+    point_id):
     data = request.json
     conn = get_db_connection()
     cur = conn.cursor()
