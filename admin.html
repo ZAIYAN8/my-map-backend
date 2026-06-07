@@ -66,12 +66,11 @@
 </div>
 
 <script>
-    // 使用相对路径，不再定义 API_BASE 和 UPLOAD_URL
     let currentMode = 'add';
 
     async function fetchPoints() {
         try {
-            const res = await fetch('/api/admin/points');
+            const res = await fetch('/api/admin/points', { credentials: 'include' });
             if (res.status === 401) {
                 // 未登录，跳转到登录页
                 window.location.href = '/login';
@@ -81,6 +80,7 @@
             renderTable(points);
         } catch (err) {
             console.error('加载失败', err);
+            showStatus('加载数据失败', 'error');
         }
     }
 
@@ -123,10 +123,14 @@
     async function uploadImage(file) {
         const formData = new FormData();
         formData.append('file', file);
-        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const res = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include'
+        });
         const data = await res.json();
         if (res.ok) return data.image_url;
-        else throw new Error(data.error);
+        else throw new Error(data.error || '上传失败');
     }
 
     async function savePoint(data, mode, id = null) {
@@ -139,17 +143,31 @@
         const res = await fetch(url, {
             method: method,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            body: JSON.stringify(data),
+            credentials: 'include'
         });
-        if (!res.ok) throw new Error('保存失败');
+        if (!res.ok) {
+            if (res.status === 401) {
+                window.location.href = '/login';
+                throw new Error('未登录');
+            }
+            throw new Error('保存失败');
+        }
         return await res.json();
     }
 
     async function deletePoint(id) {
         if (confirm('确定删除该点位吗？')) {
-            await fetch(`/api/admin/points/${id}`, { method: 'DELETE' });
-            showStatus('删除成功', 'success');
-            fetchPoints();
+            const res = await fetch(`/api/admin/points/${id}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            if (res.ok) {
+                showStatus('删除成功', 'success');
+                fetchPoints();
+            } else {
+                showStatus('删除失败', 'error');
+            }
         }
     }
 
@@ -232,7 +250,7 @@
         }
     };
 
-    document.getElementById('refreshBtn').onclick = fetchPoints;
+    document.getElementById('refreshBtn').onclick = () => fetchPoints();
     fetchPoints();
 </script>
 </body>
