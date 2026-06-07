@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>地图展示 - 影像底图</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map { height: 100vh; width: 100%; }
+        .info-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 320px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            padding: 15px;
+            font-size: 14px;
+            z-index: 1000;
+            display: none;
+            backdrop-filter: blur(4px);
+            border-left: 5px solid #3498db;
+        }
+        .info-panel img { max-width: 100%; border-radius: 8px; margin-top: 8px; }
+        .close-panel { float: right; cursor: pointer; font-weight: bold; }
+        .refresh-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+            background: #2c7da0;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+<button class="refresh-btn" onclick="location.reload();">🔄 刷新数据</button>
+<div id="map"></div>
+<div id="infoPanel" class="info-panel">
+    <span class="close-panel" onclick="closePanel()">×</span>
+    <div id="panelContent"></div>
+</div>
+
+<script>
+    const API_BASE = 'http://localhost:5000';
+    
+    var map = L.map('map').setView([25.78912, 100.195062], 10);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Esri'
+    }).addTo(map);
+
+    var markersLayer = L.layerGroup().addTo(map);
+
+    async function loadPoints() {
+        try {
+            const res = await fetch(API_BASE + '/api/points');
+            const data = await res.json();
+            markersLayer.clearLayers();
+            data.features.forEach(feature => {
+                const props = feature.properties;
+                const coords = feature.geometry.coordinates;
+                // GeoJSON 坐标顺序是 [经度, 纬度]
+                const marker = L.marker([coords[1], coords[0]]).addTo(markersLayer);
+                marker.on('click', () => {
+                    showInfo(props);
+                });
+            });
+        } catch (err) {
+            console.error('加载点位失败:', err);
+        }
+    }
+
+    function showInfo(props) {
+        const panel = document.getElementById('infoPanel');
+        const content = document.getElementById('panelContent');
+        let imgUrl = props.image_url || '';
+        // 如果 URL 不是以 http 开头，则视为相对路径，拼接 API_BASE
+        if (imgUrl && !imgUrl.startsWith('http')) {
+            imgUrl = API_BASE + imgUrl;
+        }
+        content.innerHTML = `
+            <h3>${props.name || '未命名'}</h3>
+            ${imgUrl ? `<img src="${imgUrl}" alt="图片" onerror="this.onerror=null;this.src='';this.alt='图片加载失败'">` : ''}
+            <p>${props.description || '暂无描述'}</p>
+            <small>${props.city ? props.city + '，' : ''}${props.province || ''}</small>
+        `;
+        panel.style.display = 'block';
+    }
+
+    function closePanel() {
+        document.getElementById('infoPanel').style.display = 'none';
+    }
+
+    loadPoints();
+</script>
+</body>
+</html>
