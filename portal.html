@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智慧地图服务平台 - 动态装饰版</title>
+    <title>智慧地图服务平台 - 动态警戒线+特效</title>
     <style>
         * {
             margin: 0;
@@ -12,7 +12,7 @@
             user-select: none;
         }
 
-        /* 整体背景：使用一张纹理图并模糊，达到“边框外虚化50%”的效果 */
+        /* 整体背景虚化 */
         body {
             min-height: 100vh;
             background: url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=2070&auto=format') center/cover no-repeat fixed;
@@ -22,7 +22,6 @@
             justify-content: center;
             position: relative;
         }
-        /* 模糊背景层 - 实现外部虚化 */
         body::before {
             content: '';
             position: fixed;
@@ -30,12 +29,12 @@
             left: 0;
             width: 100%;
             height: 100%;
-            backdrop-filter: blur(12px);   /* 模糊度 ≈ 50% 虚化效果 */
-            background: rgba(255, 255, 255, 0.2); /* 半透层增强柔和感 */
+            backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.2);
             z-index: -1;
         }
 
-        /* 主边框容器：内部清晰，外部模糊 */
+        /* 主边框容器 */
         .frame {
             position: relative;
             width: 1100px;
@@ -44,24 +43,24 @@
             background: rgba(255, 255, 255, 0.92);
             border-radius: 48px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255,255,255,0.8);
-            backdrop-filter: blur(0px);  /* 内部不模糊 */
+            backdrop-filter: blur(0px);
             border: 2px solid rgba(255,255,240,0.6);
-            overflow: hidden;   /* 确保内部元素（动画三角形碰到边框消失）被裁剪 */
+            overflow: hidden;
             margin: 30px;
         }
 
-        /* canvas 绘制所有装饰动画，并且不干扰点击卡片 */
+        /* 装饰 Canvas，指针穿透 */
         #decorCanvas {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            pointer-events: none;   /* 让鼠标穿透canvas，卡片可点 */
+            pointer-events: none;
             z-index: 1;
         }
 
-        /* 卡片容器，居中显示 */
+        /* 卡片容器，位于Canvas上方 */
         .cards-wrapper {
             position: relative;
             z-index: 2;
@@ -72,22 +71,50 @@
             gap: 50px;
             flex-wrap: wrap;
             padding: 30px;
-            pointer-events: auto;    /* 保证卡片可点 */
+            pointer-events: auto;
         }
 
-        /* 卡片样式 */
+        /* 卡片基本样式（警戒线边框通过伪元素实现） */
         .card {
-            background: rgba(255, 255, 255, 0.95);
+            position: relative;
             width: 300px;
+            background: rgba(255, 255, 255, 0.95);
             padding: 40px 24px;
             border-radius: 36px;
             text-decoration: none;
             text-align: center;
             backdrop-filter: blur(2px);
-            box-shadow: 0 20px 30px -10px rgba(0,0,0,0.1);
             transition: transform 0.3s ease, box-shadow 0.3s;
-            border: 1px solid #fff9;
+            border: 3px solid transparent;
+            background-clip: padding-box;
+            z-index: 2;
         }
+
+        /* 动态警戒线边框（流动斜纹） */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: -8px;
+            right: -8px;
+            bottom: -8px;
+            background: repeating-linear-gradient(
+                45deg,
+                #FFCC00,
+                #FFCC00 15px,
+                #000000 15px,
+                #000000 30px
+            );
+            border-radius: 42px;
+            z-index: -1;
+            animation: flowBorder 4s linear infinite;
+        }
+
+        @keyframes flowBorder {
+            0% { background-position: 0 0; }
+            100% { background-position: 60px 60px; }
+        }
+
         .card:hover {
             transform: translateY(-10px);
             box-shadow: 0 25px 35px -12px rgba(0,0,0,0.2);
@@ -107,7 +134,6 @@
             line-height: 1.5;
         }
 
-        /* 响应式 */
         @media (max-width: 800px) {
             .frame { width: 95vw; }
             .cards-wrapper { gap: 30px; padding: 20px; }
@@ -138,70 +164,43 @@
         const frame = document.querySelector('.frame');
         let ctx = canvas.getContext('2d');
         let width, height;
-        
-        // 动画参数
-        let angle = 0;              // 三角形绕太阳旋转的基准角度
-        let lastTimestamp = 0;
+        let angle = 0;
         let startTime = null;
-        
-        // 剑的拔插偏移（上下移动幅度）
         let swordOffset = 0;
         let swordTime = 0;
-        
-        // 太阳中心位置（四分之一太阳位于左上角）
+
         let sunCenter = { x: 0, y: 0 };
         const sunRadius = 70;
-        // 三角形旋转半径
         const triangleRadius = 100;
-        // 三角形大小
         const triSize = 16;
-        
-        // 定义三原色
         const colors = ['#FF4D4D', '#4CAF50', '#2196F3'];
-        
-        // 草地位置（右上角倒置）
         let grassBase = { x: 0, y: 0 };
-        // 剑的基准位置（插在草地上）
         let swordBase = { x: 0, y: 0 };
-        // 相机位置（左下角）
         let cameraPos = { x: 0, y: 0 };
-        
-        // 边界裁剪：判断点是否在frame内部（考虑内边距）
-        let frameRect = { left: 0, top: 0, right: 0, bottom: 0 };
-        
+        let frameRect = { left: 20, top: 20, right: 0, bottom: 0 };
+
         function updateSize() {
             const rect = frame.getBoundingClientRect();
             width = rect.width;
             height = rect.height;
             canvas.width = width;
             canvas.height = height;
-            
-            // 更新装饰元素位置（相对坐标）
-            // 左上角四分之一太阳中心: (太阳半径/2, 太阳半径/2) 使得只有右下四分之一可见
+
             sunCenter.x = sunRadius * 0.85;
             sunCenter.y = sunRadius * 0.85;
-            
-            // 右上角倒置草地：在右上区域，距离右侧 120px，距离顶部 100px
+
             grassBase.x = width - 110;
             grassBase.y = 95;
-            
-            // 剑的位置（插在草地上，剑柄朝上，剑尖向下，模拟拔插）
             swordBase.x = grassBase.x - 10;
             swordBase.y = grassBase.y + 8;
-            
-            // 左下角相机位置
             cameraPos.x = 80;
             cameraPos.y = height - 80;
-            
-            // 边界范围（考虑裁剪，三角形不能超出整个画布范围）
             frameRect = { left: 20, top: 20, right: width - 20, bottom: height - 20 };
         }
-        
-        // 绘制四分之一太阳（白色，仅有右下1/4圆，位于左上角）
+
         function drawQuarterSun() {
             ctx.save();
             ctx.beginPath();
-            // 裁剪四分之一圆（圆心的右下部分）
             ctx.arc(sunCenter.x, sunCenter.y, sunRadius, -Math.PI / 2, 0);
             ctx.lineTo(sunCenter.x, sunCenter.y);
             ctx.closePath();
@@ -209,17 +208,12 @@
             ctx.shadowBlur = 20;
             ctx.shadowColor = 'rgba(255,200,100,0.6)';
             ctx.fill();
-            // 增加光泽感
             ctx.beginPath();
             ctx.arc(sunCenter.x - 5, sunCenter.y - 5, 12, 0, Math.PI * 2);
             ctx.fillStyle = '#FFFFF0';
             ctx.fill();
-            ctx.restore();
-            
-            // 绘制日冕状的射线（从圆心向外发散）
             for (let i = 0; i < 24; i++) {
                 let rad = i * Math.PI * 2 / 24;
-                let len = 12;
                 let x1 = sunCenter.x + (sunRadius + 2) * Math.cos(rad);
                 let y1 = sunCenter.y + (sunRadius + 2) * Math.sin(rad);
                 let x2 = sunCenter.x + (sunRadius + 12) * Math.cos(rad);
@@ -231,15 +225,14 @@
                 ctx.lineWidth = 1.5;
                 ctx.stroke();
             }
+            ctx.restore();
         }
-        
-        // 绘制三角形 (红绿蓝)
+
         function drawTriangle(x, y, color, angleRad) {
             ctx.save();
             ctx.translate(x, y);
             ctx.rotate(angleRad);
             ctx.beginPath();
-            // 绘制等边三角形，指向外
             const size = triSize;
             ctx.moveTo(0, -size);
             ctx.lineTo(size * 0.866, size * 0.5);
@@ -247,26 +240,23 @@
             ctx.closePath();
             ctx.fillStyle = color;
             ctx.shadowBlur = 6;
-            ctx.shadowColor = 'rgba(0,0,0,0.2)';
             ctx.fill();
             ctx.restore();
         }
-        
-        // 绘制草地（右上角倒置，即草叶向下生长，看起来像倒挂）
+
         function drawGrass() {
             ctx.save();
             ctx.translate(grassBase.x, grassBase.y);
-            ctx.scale(1, -1);   // 倒置
+            ctx.scale(1, -1);
             ctx.beginPath();
-            for (let i = -30; i <= 30; i+=12) {
+            for (let i = -30; i <= 30; i += 12) {
                 ctx.moveTo(i, 0);
                 ctx.quadraticCurveTo(i+6, -18, i+10, -8);
                 ctx.quadraticCurveTo(i+2, -20, i, -6);
             }
             ctx.fillStyle = '#6B8E23';
             ctx.fill();
-            // 额外草叶细线
-            for (let i = -25; i <= 25; i+=8) {
+            for (let i = -25; i <= 25; i += 8) {
                 ctx.beginPath();
                 ctx.moveTo(i, 0);
                 ctx.lineTo(i-4, -22);
@@ -274,35 +264,28 @@
                 ctx.fill();
             }
             ctx.restore();
-            
-            // 绘制土地小补丁
             ctx.beginPath();
             ctx.ellipse(grassBase.x - 6, grassBase.y + 5, 20, 10, 0, 0, Math.PI*2);
             ctx.fillStyle = '#8B5A2B';
             ctx.fill();
         }
-        
-        // 绘制剑（动态上下移动）
+
         function drawSword(offsetY) {
             let x = swordBase.x;
-            let y = swordBase.y + offsetY;   // offsetY 随时间摆动
+            let y = swordBase.y + offsetY;
             ctx.save();
             ctx.translate(x, y);
-            ctx.rotate(Math.PI / 18); // 轻微倾斜
-            // 剑柄
+            ctx.rotate(Math.PI / 18);
             ctx.fillStyle = '#8B5A2B';
             ctx.fillRect(-4, -6, 8, 18);
             ctx.fillStyle = '#DAA520';
             ctx.fillRect(-2, -10, 4, 8);
-            // 剑身
             ctx.fillStyle = '#C0C0C0';
-            ctx.shadowBlur = 0;
             ctx.beginPath();
             ctx.moveTo(0, -22);
             ctx.lineTo(-4, -8);
             ctx.lineTo(4, -8);
             ctx.fill();
-            // 剑尖
             ctx.beginPath();
             ctx.moveTo(0, -28);
             ctx.lineTo(-3, -22);
@@ -311,19 +294,14 @@
             ctx.fill();
             ctx.restore();
         }
-        
-        // 绘制相机（尼康风格）
+
         function drawCamera() {
-            let x = cameraPos.x;
-            let y = cameraPos.y;
+            let x = cameraPos.x, y = cameraPos.y;
             ctx.save();
-            ctx.shadowBlur = 0;
-            // 机身
             ctx.fillStyle = '#2C3E50';
             ctx.beginPath();
             ctx.rect(x-35, y-25, 70, 50);
             ctx.fill();
-            // 镜头
             ctx.fillStyle = '#1A1F2E';
             ctx.beginPath();
             ctx.ellipse(x, y, 24, 24, 0, 0, Math.PI*2);
@@ -336,74 +314,44 @@
             ctx.beginPath();
             ctx.ellipse(x, y, 12, 12, 0, 0, Math.PI*2);
             ctx.fill();
-            // 取景器
             ctx.fillStyle = '#111';
             ctx.fillRect(x-20, y-35, 18, 12);
-            // 尼康文字
             ctx.font = 'bold 14px "Segoe UI"';
             ctx.fillStyle = '#F1C40F';
-            ctx.shadowBlur = 0;
             ctx.fillText('NIKON', x-18, y-18);
-            // 闪光灯热靴
             ctx.fillStyle = '#BDC3C7';
             ctx.fillRect(x+20, y-30, 12, 8);
             ctx.restore();
         }
-        
-        // 绘制三角形绕太阳运动，碰到边界消失（超出frameRect则不绘制）
+
         function drawTriangles(nowAngle) {
             for (let i = 0; i < 3; i++) {
                 let triAngle = nowAngle + (i * Math.PI * 2 / 3);
                 let tx = sunCenter.x + triangleRadius * Math.cos(triAngle);
                 let ty = sunCenter.y + triangleRadius * Math.sin(triAngle);
-                // 超出边界条件（碰到边框消失：不绘制）
-                if (tx < frameRect.left || tx > frameRect.right || ty < frameRect.top || ty > frameRect.bottom) {
-                    continue;
-                }
+                if (tx < frameRect.left || tx > frameRect.right || ty < frameRect.top || ty > frameRect.bottom) continue;
                 drawTriangle(tx, ty, colors[i], triAngle + Math.PI/2);
             }
         }
-        
-        // 绘制半个光环日冕围绕太阳（增加动态感）
-        function drawCorona() {
-            // 不需要额外实现，前面太阳已有射线
-        }
-        
-        // 动画循环
+
         function animate(timestamp) {
             if (!startTime) startTime = timestamp;
             let elapsed = (timestamp - startTime) / 1000;
-            
-            // 旋转角度：6秒一圈
             angle = (elapsed * Math.PI * 2 / 6) % (Math.PI * 2);
-            
-            // 剑的拔插动作：5秒一个周期，移动幅度 [-6, 6] 范围上下移动
-            swordTime = (elapsed % 5) / 5;   // 0..1 周期
-            // 正弦运动，让剑看起来像是拔出一部分又缩回
-            let swordMove = Math.sin(swordTime * Math.PI * 2) * 5;   // 幅度5px
-            
-            updateSize();   // 确保尺寸最新（窗口resize时会重新计算）
-            
-            // 清空画布
+            swordTime = (elapsed % 5) / 5;
+            let swordMove = Math.sin(swordTime * Math.PI * 2) * 5;
+
+            updateSize();
             ctx.clearRect(0, 0, width, height);
-            
-            // 绘制所有装饰（注意顺序，避免遮挡）
-            drawGrass();                 // 倒置草地
-            drawSword(swordMove);        // 剑的动态拔插
-            drawQuarterSun();            // 四分之一白色太阳
-            drawTriangles(angle);        // 三原色三角形旋转
-            drawCamera();                // 左下角尼康相机
-            
+            drawGrass();
+            drawSword(swordMove);
+            drawQuarterSun();
+            drawTriangles(angle);
+            drawCamera();
             requestAnimationFrame(animate);
         }
-        
-        // 监听窗口大小变化，重新计算布局和canvas尺寸
-        window.addEventListener('resize', () => {
-            updateSize();
-            // 强制重绘下一帧
-        });
-        
-        // 初始化
+
+        window.addEventListener('resize', () => updateSize());
         updateSize();
         startTime = null;
         requestAnimationFrame(animate);
