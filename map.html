@@ -18,7 +18,7 @@
             height: 100vh;
             width: 100%;
         }
-        /* --- 右上角城市筛选栏 --- */
+        /* 右上角城市筛选栏 */
         .filter-bar {
             position: fixed;
             top: 20px;
@@ -51,7 +51,7 @@
             cursor: pointer;
             font-size: 14px;
         }
-        /* --- 右下角弹窗面板 --- */
+        /* 右下角弹窗面板 */
         .info-panel {
             position: fixed;
             bottom: 20px;
@@ -112,18 +112,6 @@
             text-align: center;
             padding: 20px;
         }
-        /* --- 左下角底图切换控件样式优化 --- */
-        .leaflet-control-custom-layers {
-            background: white;
-            padding: 5px 10px;
-            border-radius: 4px;
-            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
-        }
-        .leaflet-control-custom-layers label {
-            margin-left: 5px;
-            font-weight: normal;
-            cursor: pointer;
-        }
     </style>
 </head>
 <body>
@@ -141,46 +129,38 @@
 </div>
 
 <script>
-    // ================= 配置底图图层 =================
-    // 1. 高德标准电子地图（矢量路网 + 注记）
+    // 高德底图配置
     const amapVec = L.tileLayer('https://webrd{s}.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scale=1&style=8', {
         subdomains: ['0', '1', '2', '3'],
         maxZoom: 18,
         attribution: '© 高德地图'
     });
-
-    // 2. 高德卫星影像图（纯影像，无注记）
     const amapImg = L.tileLayer('https://webst{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}', {
         subdomains: ['0', '1', '2', '3'],
         maxZoom: 18,
         attribution: '© 高德地图'
     });
-
-    // 3. 高德影像注记图（在影像图上叠加路名、地标等）
     const amapLabel = L.tileLayer('https://webst{s}.is.autonavi.com/appmaptile?style=8&x={x}&y={y}&z={z}', {
         subdomains: ['0', '1', '2', '3'],
         maxZoom: 18,
         attribution: '© 高德地图'
     });
 
-    // 可选底图集合（默认显示电子地图）
     const baseMaps = {
         "高德电子地图": amapVec,
         "高德卫星影像": amapImg,
         "高德影像注记": amapLabel
     };
 
-    // 初始化地图，默认使用电子地图，视角设定在云南大理周边
+    // 初始化地图，默认显示电子地图
     const map = L.map('map', {
-        layers: [amapVec]  // 设置默认显示的图层
+        layers: [amapVec]
     }).setView([25.78912, 100.195062], 10);
 
-    // 添加图层切换控件（左上角）
-    L.control.layers(baseMaps).addTo(map);
+    // ★★★ 关键修改：将底图切换控件放在左下角 ★★★
+    L.control.layers(baseMaps, null, { position: 'bottomleft' }).addTo(map);
 
-    // 如果你希望控件放在左下角，可以自定义，不过 Leaflet 默认的左上角位置也比较好用
-
-    // ================= 以下是点位加载与交互逻辑 =================
+    // 点位数据层
     let markersLayer = L.layerGroup().addTo(map);
     let allPointsData = [];
 
@@ -189,21 +169,18 @@
             const res = await fetch('/api/points');
             const data = await res.json();
             allPointsData = data.features || [];
-            // 动态生成城市下拉框选项
             const citiesSet = new Set();
             allPointsData.forEach(f => {
                 const city = f.properties.city;
                 if (city && city.trim() !== '') citiesSet.add(city);
             });
             const citySelect = document.getElementById('citySelect');
-            // 保留“全部”选项，然后添加各个城市
             citiesSet.forEach(city => {
                 const option = document.createElement('option');
                 option.value = city;
                 option.textContent = city;
                 citySelect.appendChild(option);
             });
-            // 初始加载全部点位
             filterPointsByCity('all');
         } catch (err) {
             console.error('加载点位失败:', err);
@@ -211,21 +188,9 @@
     }
 
     function filterPointsByCity(selectedCity) {
-        if (!map) return;
         markersLayer.clearLayers();
-
-        let filtered = [];
-        if (selectedCity === 'all') {
-            filtered = allPointsData;
-        } else {
-            filtered = allPointsData.filter(f => f.properties.city === selectedCity);
-        }
-
-        if (filtered.length === 0) {
-            console.log('该城市暂无点位');
-            return;
-        }
-
+        let filtered = (selectedCity === 'all') ? allPointsData : allPointsData.filter(f => f.properties.city === selectedCity);
+        if (filtered.length === 0) return;
         const bounds = [];
         filtered.forEach(feature => {
             const props = feature.properties;
@@ -233,15 +198,10 @@
             const latlng = [coords[1], coords[0]];
             bounds.push(latlng);
             const marker = L.marker(latlng).addTo(markersLayer);
-            marker.on('click', () => {
-                showInfo(props);
-            });
+            marker.on('click', () => showInfo(props));
         });
-
-        // 自动缩放到所选城市的范围
         if (bounds.length > 0) {
-            const groupBounds = L.latLngBounds(bounds);
-            map.fitBounds(groupBounds, { padding: [50, 50] });
+            map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50] });
         }
     }
 
@@ -272,14 +232,11 @@
         });
     }
 
-    // 监听城市选择变化
     document.getElementById('citySelect').addEventListener('change', function(e) {
-        const city = e.target.value;
-        filterPointsByCity(city);
-        closePanel(); // 切换城市后关闭信息面板
+        filterPointsByCity(e.target.value);
+        closePanel();
     });
 
-    // 初始化
     loadAllPoints();
 </script>
 </body>
