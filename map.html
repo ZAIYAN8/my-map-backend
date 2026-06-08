@@ -6,85 +6,219 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        #map { height: 100vh; width: 100%; }
-        .info-panel {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 320px;
-            background: rgba(255,255,255,0.95);
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            padding: 15px;
-            font-size: 14px;
-            z-index: 1000;
-            display: none;
-            backdrop-filter: blur(4px);
-            border-left: 5px solid #3498db;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .info-panel img { max-width: 100%; border-radius: 8px; margin-top: 8px; }
-        .close-panel { float: right; cursor: pointer; font-weight: bold; }
-        .refresh-btn {
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+        /* 右上角筛选栏 */
+        .filter-bar {
             position: fixed;
             top: 20px;
             right: 20px;
             z-index: 1001;
+            background: rgba(255,255,255,0.95);
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            font-size: 14px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            backdrop-filter: blur(4px);
+        }
+        .filter-bar select {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .refresh-btn {
             background: #2c7da0;
             color: white;
             border: none;
-            border-radius: 8px;
-            padding: 8px 16px;
+            border-radius: 6px;
+            padding: 6px 12px;
             cursor: pointer;
             font-size: 14px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        /* 右侧信息面板 - 放大 */
+        .info-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 420px;          /* 加宽，符合你画的范围 */
+            max-width: 90vw;
+            background: rgba(255, 255, 255, 0.96);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            font-size: 15px;
+            z-index: 1000;
+            display: none;
+            backdrop-filter: blur(8px);
+            border-left: 6px solid #3498db;
+            transition: 0.2s;
+        }
+        .info-panel h3 {
+            margin: 0 0 12px 0;
+            color: #2c7da0;
+            font-size: 20px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 6px;
+        }
+        .info-panel img {
+            max-width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin: 12px 0;
+            display: block;
+        }
+        .info-panel p {
+            margin: 8px 0;
+            line-height: 1.5;
+            color: #333;
+        }
+        .info-panel .location {
+            font-size: 13px;
+            color: #666;
+            margin-top: 10px;
+            border-top: 1px dashed #ccc;
+            padding-top: 8px;
+        }
+        .close-panel {
+            float: right;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 18px;
+            color: #888;
+            transition: 0.2s;
+        }
+        .close-panel:hover {
+            color: #333;
+        }
+        .empty-panel {
+            color: #999;
+            text-align: center;
+            padding: 20px;
         }
     </style>
 </head>
 <body>
-<button class="refresh-btn" onclick="location.reload();">🔄 刷新数据</button>
+<div class="filter-bar">
+    <span>📍 选择城市：</span>
+    <select id="citySelect">
+        <option value="all">全部</option>
+    </select>
+    <button class="refresh-btn" onclick="location.reload();">🔄 刷新数据</button>
+</div>
 <div id="map"></div>
 <div id="infoPanel" class="info-panel">
     <span class="close-panel" onclick="closePanel()">×</span>
-    <div id="panelContent"></div>
+    <div id="panelContent"><div class="empty-panel">✨ 点击地图上的标记<br>显示详细信息</div></div>
 </div>
 
 <script>
-    // 不再定义 API_BASE，使用相对路径
-    var map = L.map('map').setView([25.78912, 100.195062], 10);
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Esri'
-    }).addTo(map);
+    const API_BASE = '';  // 相对路径
+    let map = null;
+    let markersLayer = null;
+    let allPointsData = [];   // 存储所有点位原始数据
 
-    var markersLayer = L.layerGroup().addTo(map);
-
-    async function loadPoints() {
+    async function loadAllPoints() {
         try {
             const res = await fetch('/api/points');
             const data = await res.json();
-            markersLayer.clearLayers();
-            data.features.forEach(feature => {
-                const props = feature.properties;
-                const coords = feature.geometry.coordinates;
-                const marker = L.marker([coords[1], coords[0]]).addTo(markersLayer);
-                marker.on('click', () => {
-                    showInfo(props);
-                });
+            allPointsData = data.features || [];
+            // 动态生成城市下拉框选项
+            const citiesSet = new Set();
+            allPointsData.forEach(f => {
+                const city = f.properties.city;
+                if (city && city.trim() !== '') citiesSet.add(city);
             });
+            const citySelect = document.getElementById('citySelect');
+            // 保留“全部”选项，然后添加各个城市
+            citiesSet.forEach(city => {
+                const option = document.createElement('option');
+                option.value = city;
+                option.textContent = city;
+                citySelect.appendChild(option);
+            });
+            // 初始加载全部点位
+            filterPointsByCity('all');
         } catch (err) {
             console.error('加载点位失败:', err);
         }
+    }
+
+    function filterPointsByCity(selectedCity) {
+        if (!map) initMap();
+        // 清除旧标记
+        if (markersLayer) markersLayer.clearLayers();
+        else markersLayer = L.layerGroup().addTo(map);
+
+        let filtered = [];
+        if (selectedCity === 'all') {
+            filtered = allPointsData;
+        } else {
+            filtered = allPointsData.filter(f => f.properties.city === selectedCity);
+        }
+
+        if (filtered.length === 0) {
+            // 无数据时仍保持地图不移动，显示提示（可选）
+            console.log('该城市暂无点位');
+            return;
+        }
+
+        const bounds = [];
+        filtered.forEach(feature => {
+            const props = feature.properties;
+            const coords = feature.geometry.coordinates;
+            const latlng = [coords[1], coords[0]];
+            bounds.push(latlng);
+            const marker = L.marker(latlng).addTo(markersLayer);
+            marker.on('click', () => {
+                showInfo(props);
+            });
+        });
+
+        // 自动缩放到所选城市的范围
+        if (bounds.length > 0) {
+            const groupBounds = L.latLngBounds(bounds);
+            map.fitBounds(groupBounds, { padding: [50, 50] });
+        }
+    }
+
+    function initMap() {
+        map = L.map('map').setView([25.78912, 100.195062], 10);
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Esri'
+        }).addTo(map);
+        markersLayer = L.layerGroup().addTo(map);
     }
 
     function showInfo(props) {
         const panel = document.getElementById('infoPanel');
         const content = document.getElementById('panelContent');
         let imgUrl = props.image_url || '';
-        // 数据库中存储的 image_url 已经是完整的七牛云 URL，无需拼接
+        // 如果图片链接以 http 开头则直接使用，否则拼接 API_BASE（但数据库里已是完整链接）
+        if (imgUrl && !imgUrl.startsWith('http')) {
+            imgUrl = API_BASE + imgUrl;
+        }
         content.innerHTML = `
             <h3>${escapeHtml(props.name) || '未命名'}</h3>
             ${imgUrl ? `<img src="${imgUrl}" alt="图片" onerror="this.onerror=null;this.src='';this.alt='图片加载失败'">` : ''}
             <p>${escapeHtml(props.description) || '暂无描述'}</p>
-            <small>${escapeHtml(props.city) ? escapeHtml(props.city) + '，' : ''}${escapeHtml(props.province) || ''}</small>
+            <div class="location">📍 ${escapeHtml(props.city) ? escapeHtml(props.city) + '，' : ''}${escapeHtml(props.province) || ''}</div>
         `;
         panel.style.display = 'block';
     }
@@ -93,7 +227,6 @@
         document.getElementById('infoPanel').style.display = 'none';
     }
 
-    // 简单的防XSS
     function escapeHtml(str) {
         if (!str) return '';
         return str.replace(/[&<>]/g, function(m) {
@@ -104,7 +237,16 @@
         });
     }
 
-    loadPoints();
+    // 监听城市选择变化
+    document.getElementById('citySelect').addEventListener('change', function(e) {
+        const city = e.target.value;
+        filterPointsByCity(city);
+        // 同时关闭信息面板
+        closePanel();
+    });
+
+    // 初始化
+    loadAllPoints();
 </script>
 </body>
 </html>

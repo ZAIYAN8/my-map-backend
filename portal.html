@@ -1,86 +1,83 @@
-@app.route('/')
-def portal():
-    <!DOCTYPE html>
-    <html lang="zh-CN">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>地图服务管理平台</title>
-        <style>
-            body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-                margin: 0;
-                height: 100vh;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                color: white;
-            }
-            .container {
-                text-align: center;
-                background: rgba(0,0,0,0.6);
-                padding: 40px;
-                border-radius: 20px;
-                backdrop-filter: blur(10px);
-                box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-            }
-            h1 {
-                margin-bottom: 30px;
-                font-size: 2.5rem;
-            }
-            .buttons {
-                display: flex;
-                gap: 30px;
-                justify-content: center;
-                flex-wrap: wrap;
-            }
-            .card {
-                background: white;
-                color: #333;
-                width: 250px;
-                padding: 30px 20px;
-                border-radius: 16px;
-                text-decoration: none;
-                transition: transform 0.2s, box-shadow 0.2s;
-                display: inline-block;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            }
-            .card:hover {
-                transform: translateY(-8px);
-                box-shadow: 0 12px 25px rgba(0,0,0,0.3);
-            }
-            .card h2 {
-                margin: 0 0 10px;
-                color: #2c7da0;
-            }
-            .card p {
-                margin: 0;
-                font-size: 14px;
-                color: #666;
-            }
-            .icon {
-                font-size: 48px;
-                margin-bottom: 15px;
-            }
-        </style>
-    </head>
-    <body>
-    <div class="container">
-        <h1>🗺️ 智慧地图服务平台</h1>
-        <div class="buttons">
-            <a href="/map.html" class="card">
-                <div class="icon">🗺️</div>
-                <h2>地图展示端</h2>
-                <p>浏览点位、查看影像底图、点击获取详情</p>
-            </a>
-            <a href="/admin.html" class="card">
-                <div class="icon">⚙️</div>
-                <h2>运维管理端</h2>
-                <p>增删改查点位、上传图片、数据维护</p>
-            </a>
-        </div>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧地图服务平台</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+        .container {
+            text-align: center;
+            background: rgba(0,0,0,0.6);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        h1 {
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+        }
+        .buttons {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .card {
+            background: white;
+            color: #333;
+            width: 250px;
+            padding: 30px 20px;
+            border-radius: 16px;
+            text-decoration: none;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: inline-block;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 25px rgba(0,0,0,0.3);
+        }
+        .card h2 {
+            margin: 0 0 10px;
+            color: #2c7da0;
+        }
+        .card p {
+            margin: 0;
+            font-size: 14px;
+            color: #666;
+        }
+        .icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🗺️ 智慧地图服务平台</h1>
+    <div class="buttons">
+        <a href="/map.html" class="card">
+            <div class="icon">🗺️</div>
+            <h2>地图展示端</h2>
+            <p>浏览点位、查看影像底图、点击获取详情</p>
+        </a>
+        <a href="/admin.html" class="card">
+            <div class="icon">⚙️</div>
+            <h2>运维管理端</h2>
+            <p>增删改查点位、上传图片、数据维护</p>
+        </a>
     </div>
-    </body>
-    </html>
-    '''
+</div>
+</body>
+</html>
