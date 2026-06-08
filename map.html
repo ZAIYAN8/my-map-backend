@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>地图展示 - 影像+电子底图</title>
+    <title>地图展示 - Esri 影像+电子底图</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -73,31 +73,26 @@
 </div>
 
 <script>
-    // ---------- 底图定义 ----------
-    // 1. Esri World Imagery (卫星影像，之前能正常加载)
+    // 底图1: Esri 卫星影像
     const esriImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+        attribution: 'Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP',
+        maxZoom: 18
+    });
+    // 底图2: Esri 电子地图（路网+注记）
+    const esriStreet = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Esri, HERE, Garmin, USGS',
         maxZoom: 18
     });
 
-    // 2. OpenStreetMap 标准电子地图（稳定，无需 key）
-    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap 贡献者',
-        maxZoom: 19
-    });
-
-    // 可选底图集合
     const baseMaps = {
         "Esri 卫星影像": esriImagery,
-        "OpenStreetMap 电子地图": osm
+        "Esri 电子地图": esriStreet
     };
 
-    // 初始化地图，默认显示 Esri 卫星影像
     const map = L.map('map', { layers: [esriImagery] }).setView([25.78912, 100.195062], 10);
-    // 左下角底图切换控件
     L.control.layers(baseMaps, null, { position: 'bottomleft' }).addTo(map);
 
-    // ---------- 点位数据与交互 ----------
+    // 点位数据与交互
     let markersLayer = L.layerGroup().addTo(map);
     let allPointsData = [];
 
@@ -107,17 +102,9 @@
             const data = await res.json();
             allPointsData = data.features || [];
             const citiesSet = new Set();
-            allPointsData.forEach(f => {
-                const city = f.properties.city;
-                if (city && city.trim()) citiesSet.add(city);
-            });
+            allPointsData.forEach(f => { const city = f.properties.city; if (city && city.trim()) citiesSet.add(city); });
             const citySelect = document.getElementById('citySelect');
-            citiesSet.forEach(city => {
-                const opt = document.createElement('option');
-                opt.value = city;
-                opt.textContent = city;
-                citySelect.appendChild(opt);
-            });
+            citiesSet.forEach(city => { const opt = document.createElement('option'); opt.value = city; opt.textContent = city; citySelect.appendChild(opt); });
             filterPointsByCity('all');
         } catch (err) { console.error('加载点位失败:', err); }
     }
