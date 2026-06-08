@@ -2,13 +2,15 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>地图展示 - Esri 影像+电子底图</title>
+    <title>地图展示 - 影像+电子底图</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Microsoft YaHei', sans-serif; }
         #map { height: 100vh; width: 100%; }
+
+        /* 右上角筛选栏 */
         .filter-bar {
             position: fixed;
             top: 20px;
@@ -35,29 +37,83 @@
             background: #2c7da0;
             color: white;
         }
+
+        /* 右侧信息面板：从上到下占满右侧区域 */
         .info-panel {
             position: fixed;
-            bottom: 20px;
+            top: 80px;           /* 避开筛选栏，从下方开始 */
             right: 20px;
-            width: 420px;
+            bottom: 20px;        /* 贴底 */
+            width: 420px;        /* 可调宽度，例如 480px */
             max-width: 90vw;
-            background: rgba(255,255,255,0.96);
+            background: rgba(255, 255, 255, 0.96);
             border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
             padding: 20px;
             font-size: 15px;
             z-index: 1000;
             display: none;
             backdrop-filter: blur(8px);
             border-left: 6px solid #3498db;
+            overflow-y: auto;    /* 内容过多时滚动 */
+            transition: 0.2s;
         }
-        .info-panel h3 { margin:0 0 12px 0; color:#2c7da0; font-size:20px; border-bottom:1px solid #ddd; padding-bottom:6px; }
-        .info-panel img { max-width:100%; max-height:200px; border-radius:10px; margin:12px 0; }
-        .info-panel p { margin:8px 0; line-height:1.5; color:#333; }
-        .info-panel .location { font-size:13px; color:#666; margin-top:10px; border-top:1px dashed #ccc; padding-top:8px; }
-        .close-panel { float:right; cursor:pointer; font-weight:bold; font-size:18px; color:#888; }
-        .close-panel:hover { color:#333; }
-        .empty-panel { color:#999; text-align:center; padding:20px; }
+
+        .info-panel h3 {
+            margin: 0 0 12px 0;
+            color: #2c7da0;
+            font-size: 20px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 6px;
+        }
+        .info-panel img {
+            max-width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin: 12px 0;
+            display: block;
+        }
+        .info-panel p {
+            margin: 8px 0;
+            line-height: 1.5;
+            color: #333;
+        }
+        .info-panel .location {
+            font-size: 13px;
+            color: #666;
+            margin-top: 10px;
+            border-top: 1px dashed #ccc;
+            padding-top: 8px;
+        }
+        .close-panel {
+            float: right;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 18px;
+            color: #888;
+        }
+        .close-panel:hover { color: #333; }
+        .empty-panel {
+            color: #999;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* 小屏幕适配：面板宽度稍微减小 */
+        @media (max-width: 768px) {
+            .info-panel {
+                width: 300px;
+                top: 70px;
+                right: 10px;
+                bottom: 10px;
+            }
+            .filter-bar {
+                top: 10px;
+                right: 10px;
+                padding: 6px 10px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -73,26 +129,24 @@
 </div>
 
 <script>
-    // 底图1: Esri 卫星影像
+    // 底图定义
     const esriImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP',
         maxZoom: 18
     });
-    // 底图2: Esri 电子地图（路网+注记）
     const esriStreet = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Esri, HERE, Garmin, USGS',
         maxZoom: 18
     });
-
     const baseMaps = {
         "Esri 卫星影像": esriImagery,
         "Esri 电子地图": esriStreet
     };
 
     const map = L.map('map', { layers: [esriImagery] }).setView([25.78912, 100.195062], 10);
+    // 左下角底图切换控件
     L.control.layers(baseMaps, null, { position: 'bottomleft' }).addTo(map);
 
-    // 点位数据与交互
     let markersLayer = L.layerGroup().addTo(map);
     let allPointsData = [];
 
@@ -102,9 +156,17 @@
             const data = await res.json();
             allPointsData = data.features || [];
             const citiesSet = new Set();
-            allPointsData.forEach(f => { const city = f.properties.city; if (city && city.trim()) citiesSet.add(city); });
+            allPointsData.forEach(f => {
+                const city = f.properties.city;
+                if (city && city.trim()) citiesSet.add(city);
+            });
             const citySelect = document.getElementById('citySelect');
-            citiesSet.forEach(city => { const opt = document.createElement('option'); opt.value = city; opt.textContent = city; citySelect.appendChild(opt); });
+            citiesSet.forEach(city => {
+                const opt = document.createElement('option');
+                opt.value = city;
+                opt.textContent = city;
+                citySelect.appendChild(opt);
+            });
             filterPointsByCity('all');
         } catch (err) { console.error('加载点位失败:', err); }
     }
