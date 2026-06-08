@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>地图展示 - 多底图切换</title>
+    <title>地图展示 - 影像+电子底图</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -73,32 +73,31 @@
 </div>
 
 <script>
-    // 底图1: OpenStreetMap (稳定, 无key)
+    // ---------- 底图定义 ----------
+    // 1. Esri World Imagery (卫星影像，之前能正常加载)
+    const esriImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+        maxZoom: 18
+    });
+
+    // 2. OpenStreetMap 标准电子地图（稳定，无需 key）
     const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap 贡献者',
         maxZoom: 19
     });
-    // 底图2: Google 卫星影像 (可能被部分地区限制, 但通常可用)
-    const googleSat = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-        maxZoom: 20,
-        attribution: '© Google'
-    });
-    // 底图3: Google 路网
-    const googleRoad = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-        maxZoom: 20,
-        attribution: '© Google'
-    });
 
+    // 可选底图集合
     const baseMaps = {
-        "OpenStreetMap": osm,
-        "Google卫星影像": googleSat,
-        "Google路网": googleRoad
+        "Esri 卫星影像": esriImagery,
+        "OpenStreetMap 电子地图": osm
     };
 
-    const map = L.map('map', { layers: [osm] }).setView([25.78912, 100.195062], 10);
+    // 初始化地图，默认显示 Esri 卫星影像
+    const map = L.map('map', { layers: [esriImagery] }).setView([25.78912, 100.195062], 10);
     // 左下角底图切换控件
     L.control.layers(baseMaps, null, { position: 'bottomleft' }).addTo(map);
 
+    // ---------- 点位数据与交互 ----------
     let markersLayer = L.layerGroup().addTo(map);
     let allPointsData = [];
 
