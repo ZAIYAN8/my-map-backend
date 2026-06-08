@@ -2,12 +2,9 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>地图展示 - 卫星+电子+地形</title>
+    <title>地图展示 - 影像+电子底图</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- 引入地形图插件 -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-elevation@1.6.4/leaflet-elevation.css" />
-    <script src="https://cdn.jsdelivr.net/npm/leaflet-elevation@1.6.4/leaflet-elevation.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Microsoft YaHei', sans-serif; }
@@ -41,13 +38,13 @@
             color: white;
         }
 
-        /* 右侧信息面板 */
+        /* 右侧信息面板：从上到下占满右侧区域 */
         .info-panel {
             position: fixed;
-            top: 80px;
+            top: 80px;           /* 避开筛选栏，从下方开始 */
             right: 20px;
-            bottom: 20px;
-            width: 420px;
+            bottom: 20px;        /* 贴底 */
+            width: 420px;        /* 可调宽度，例如 480px */
             max-width: 90vw;
             background: rgba(255, 255, 255, 0.96);
             border-radius: 16px;
@@ -58,8 +55,10 @@
             display: none;
             backdrop-filter: blur(8px);
             border-left: 6px solid #3498db;
-            overflow-y: auto;
+            overflow-y: auto;    /* 内容过多时滚动 */
+            transition: 0.2s;
         }
+
         .info-panel h3 {
             margin: 0 0 12px 0;
             color: #2c7da0;
@@ -73,6 +72,7 @@
             object-fit: cover;
             border-radius: 10px;
             margin: 12px 0;
+            display: block;
         }
         .info-panel p {
             margin: 8px 0;
@@ -99,9 +99,20 @@
             text-align: center;
             padding: 20px;
         }
+
+        /* 小屏幕适配：面板宽度稍微减小 */
         @media (max-width: 768px) {
-            .info-panel { width: 300px; top: 70px; right: 10px; bottom: 10px; }
-            .filter-bar { top: 10px; right: 10px; padding: 6px 10px; }
+            .info-panel {
+                width: 300px;
+                top: 70px;
+                right: 10px;
+                bottom: 10px;
+            }
+            .filter-bar {
+                top: 10px;
+                right: 10px;
+                padding: 6px 10px;
+            }
         }
     </style>
 </head>
@@ -118,7 +129,7 @@
 </div>
 
 <script>
-    // ========== 底图定义 ==========
+    // 底图定义
     const esriImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP',
         maxZoom: 18
@@ -127,33 +138,15 @@
         attribution: 'Esri, HERE, Garmin, USGS',
         maxZoom: 18
     });
-    // 新增地形图
-    const topoMap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-        attribution: 'Map data: © OpenTopoMap contributors, © OpenStreetMap',
-        maxZoom: 17,
-        subdomains: 'abc'
-    });
-
     const baseMaps = {
         "Esri 卫星影像": esriImagery,
-        "Esri 电子地图": esriStreet,
-        "地形图 (OpenTopoMap)": topoMap
+        "Esri 电子地图": esriStreet
     };
 
-    // 默认显示卫星影像
     const map = L.map('map', { layers: [esriImagery] }).setView([25.78912, 100.195062], 10);
     // 左下角底图切换控件
     L.control.layers(baseMaps, null, { position: 'bottomleft' }).addTo(map);
 
-    // 海拔控件（右下角）
-    L.control.elevation({
-        position: "bottomright",
-        theme: "steelblue-theme",
-        title: "地形剖面图",
-        collapsed: true
-    }).addTo(map);
-
-    // ========== 点位数据加载与交互 ==========
     let markersLayer = L.layerGroup().addTo(map);
     let allPointsData = [];
 
@@ -190,7 +183,7 @@
             const marker = L.marker(latlng).addTo(markersLayer);
             marker.on('click', () => showInfo(f.properties));
         });
-        if (bounds.length) map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50] });
+        map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50] });
     }
 
     function showInfo(props) {
