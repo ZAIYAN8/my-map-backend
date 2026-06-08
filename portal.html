@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智慧地图服务平台 - 动画版</title>
-    <!-- 引入 anime.js 动画库 -->
-    <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js"></script>
+    <title>智慧地图服务平台 - 旋转太阳</title>
     <style>
         * {
             margin: 0;
@@ -14,70 +12,95 @@
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #ffffff;   /* 白色背景 */
+            background: #ffffff;
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             color: #333;
+            position: relative;
         }
+
+        /* 三个小太阳的容器（固定在左上角） */
+        .suns {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            z-index: 10;
+            display: flex;
+            flex-direction: row;
+            gap: 0;  /* 间隙通过偏移控制重叠 */
+        }
+
+        /* 小太阳的通用样式 */
+        .sun {
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle at 30% 30%, #ffdd77, #ff9900);
+            border-radius: 50%;
+            box-shadow: 0 0 20px rgba(255, 160, 0, 0.5);
+            /* 自转动画：3秒一圈，线性无限循环 */
+            animation: spin 3s linear infinite;
+            transform-origin: center center;
+            /* 重叠：第二个和第三个向左偏移，实现约30%重叠（80px * 0.3 ≈ 24px） */
+            margin-left: -24px;
+        }
+
+        /* 第一个不偏移（保持原始位置） */
+        .sun:first-child {
+            margin-left: 0;
+        }
+
+        /* 可选：增加小光芒（伪元素） */
+        .sun::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: -8px;
+            right: -8px;
+            bottom: -8px;
+            background: radial-gradient(circle, rgba(255,200,100,0.3), transparent 70%);
+            border-radius: 50%;
+            z-index: -1;
+        }
+
+        /* 旋转动画 */
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* 为了让太阳更生动，添加微小的浮动效果（可选） */
+        .sun {
+            transition: transform 0.2s ease;
+        }
+        .sun:hover {
+            transform: scale(1.05);
+            animation-play-state: paused;
+        }
+
+        /* 主要内容区 */
         .container {
             max-width: 1200px;
             width: 90%;
             margin: 40px auto;
             text-align: center;
             position: relative;
+            z-index: 1;
         }
-        /* 标题区域 */
+
         h1 {
             font-size: 2.5rem;
             margin-bottom: 40px;
             color: #2c7da0;
             letter-spacing: 2px;
         }
-        /* 动画区域 - 放置三个小方块 */
-        .animation-area {
-            background: #f8f9fa;      /* 浅灰色背景，突出方块 */
-            border-radius: 20px;
-            padding: 30px 20px;
-            margin-bottom: 50px;
-            position: relative;
-            overflow: hidden;          /* 隐藏超出边界的部分，实现“消失”效果 */
-            min-height: 120px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-        /* 方块容器（相对定位，作为移动基准） */
-        .square-container {
-            position: relative;
-            width: 100%;
-            height: 70px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        /* 小方块的通用样式 */
-        .square {
-            position: absolute;
-            width: 60px;
-            height: 60px;
-            border-radius: 12px;
-            opacity: 0.9;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            /* 初始位置在左侧外部 */
-            left: -80px;
-            top: 5px;
-        }
-        /* 三原色 */
-        .square-red {
-            background-color: #ff4d4d;   /* 红 */
-        }
-        .square-green {
-            background-color: #4caf50;   /* 绿 */
-        }
-        .square-blue {
-            background-color: #2196f3;   /* 蓝 */
-        }
-        /* 两个功能卡片区域 */
+
+        /* 卡片区域 */
         .cards {
             display: flex;
             justify-content: center;
@@ -85,6 +108,7 @@
             flex-wrap: wrap;
             margin-top: 20px;
         }
+
         .card {
             background: white;
             width: 280px;
@@ -95,113 +119,76 @@
             box-shadow: 0 8px 20px rgba(0,0,0,0.08);
             border: 1px solid #eaeef2;
         }
+
         .card:hover {
             transform: translateY(-8px);
             box-shadow: 0 16px 30px rgba(0,0,0,0.12);
         }
+
         .card .icon {
             font-size: 56px;
             margin-bottom: 16px;
         }
+
         .card h2 {
             color: #2c7da0;
             font-size: 24px;
             margin-bottom: 12px;
         }
+
         .card p {
             color: #666;
             font-size: 15px;
             line-height: 1.5;
         }
-        /* 响应式 */
+
+        /* 响应式：小屏幕时太阳缩小，偏移量相应调整 */
         @media (max-width: 700px) {
-            .cards { gap: 20px; }
-            .card { width: 240px; padding: 20px; }
-            .square { width: 50px; height: 50px; }
+            .sun {
+                width: 60px;
+                height: 60px;
+                margin-left: -18px;
+            }
+            .sun:first-child {
+                margin-left: 0;
+            }
+            .cards {
+                gap: 20px;
+            }
+            .card {
+                width: 240px;
+                padding: 20px;
+            }
+            h1 {
+                font-size: 1.8rem;
+            }
         }
     </style>
 </head>
 <body>
-<div class="container">
-    <h1>🗺️ 智慧地图服务平台</h1>
+    <!-- 左上角三个自转的小太阳（约30%重叠） -->
+    <div class="suns">
+        <div class="sun"></div>
+        <div class="sun"></div>
+        <div class="sun"></div>
+    </div>
 
-    <!-- 动画区域：三个小方块从左向右滚动消失 -->
-    <div class="animation-area">
-        <div class="square-container">
-            <div class="square square-red" id="squareRed"></div>
-            <div class="square square-green" id="squareGreen"></div>
-            <div class="square square-blue" id="squareBlue"></div>
+    <div class="container">
+        <h1>🗺️ 智慧地图服务平台</h1>
+
+        <!-- 两个功能入口卡片 -->
+        <div class="cards">
+            <a href="/map.html" class="card">
+                <div class="icon">🗺️</div>
+                <h2>地图展示端</h2>
+                <p>浏览点位、查看影像底图、点击获取详情</p>
+            </a>
+            <a href="/admin.html" class="card">
+                <div class="icon">⚙️</div>
+                <h2>运维管理端</h2>
+                <p>增删改查点位、上传图片、数据维护</p>
+            </a>
         </div>
-        <p style="margin-top: 20px; font-size: 14px; color: #888;">✨ 三原色方块依次从左滑入 → 向右滑出消失 ✨</p>
     </div>
-
-    <!-- 两个功能入口卡片 -->
-    <div class="cards">
-        <a href="/map.html" class="card">
-            <div class="icon">🗺️</div>
-            <h2>地图展示端</h2>
-            <p>浏览点位、查看影像底图、点击获取详情</p>
-        </a>
-        <a href="/admin.html" class="card">
-            <div class="icon">⚙️</div>
-            <h2>运维管理端</h2>
-            <p>增删改查点位、上传图片、数据维护</p>
-        </a>
-    </div>
-</div>
-
-<script>
-    // 等待 DOM 加载完成
-    document.addEventListener('DOMContentLoaded', function() {
-        // 获取三个方块元素
-        const redSquare = document.getElementById('squareRed');
-        const greenSquare = document.getElementById('squareGreen');
-        const blueSquare = document.getElementById('squareBlue');
-
-        // 计算需要移动的总距离：从左边 -80px 到右边超出父容器宽度 + 80px
-        // 获取父容器的实际宽度（.square-container 的宽度）
-        const container = document.querySelector('.square-container');
-        const containerWidth = container.clientWidth;
-        const startX = -80;                    // 起始 left 值
-        const endX = containerWidth + 80;      // 终点 left 值
-
-        // 定义一个通用动画函数：逐个触发
-        function animateSquare(element, delay) {
-            // 先重置位置到起点（确保每次循环都能重新开始）
-            element.style.left = startX + 'px';
-            // 使用 anime.js 创建动画
-            anime({
-                targets: element,
-                left: [startX, endX],          // 从 startX 到 endX
-                duration: 2500,                // 2.5 秒完成移动
-                easing: 'easeInOutQuad',
-                delay: delay,                  // 延迟启动（实现依次效果）
-                complete: function(anim) {
-                    // 动画完成后，重置位置，并延迟一小段时间后重新开始（形成循环）
-                    setTimeout(() => {
-                        animateSquare(element, 0);  // 自身循环，无额外延迟
-                    }, 300);
-                }
-            });
-        }
-
-        // 首次启动：红块延迟0s，绿块延迟0.8s，蓝块延迟1.6s
-        animateSquare(redSquare, 0);
-        animateSquare(greenSquare, 800);
-        animateSquare(blueSquare, 1600);
-
-        // 可选：当窗口大小改变时，重新计算目标位置（避免溢出）
-        let resizeTimeout;
-        window.addEventListener('resize', function() {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(() => {
-                const newWidth = container.clientWidth;
-                const newEndX = newWidth + 80;
-                // 简单重新触发动画（略微复杂，为了体验，可忽略或重新初始化）
-                // 此处简单刷新页面即可，或者不做复杂处理，因为影响不大
-            }, 200);
-        });
-    });
-</script>
 </body>
 </html>
