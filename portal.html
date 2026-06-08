@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智慧地图服务平台 - 动态警戒线+特效</title>
+    <title>智慧地图服务平台 - 外围警戒线+装饰特效</title>
     <style>
         * {
             margin: 0;
@@ -47,6 +47,37 @@
             border: 2px solid rgba(255,255,240,0.6);
             overflow: hidden;
             margin: 30px;
+            /* 警戒线伪元素放在最底层 */
+            isolation: isolate;
+        }
+
+        /* 静态警戒线（覆盖边框区域约30%，不影响内部内容） */
+        .frame::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                45deg,
+                #FFCC00,
+                #FFCC00 12px,
+                #000000 12px,
+                #000000 24px
+            );
+            opacity: 0.3;          /* 控制覆盖强度，不遮挡内部 */
+            mix-blend-mode: multiply; /* 产生混乱融合感 */
+            pointer-events: none;   /* 让点击穿透 */
+            z-index: 0;
+            border-radius: 48px;
+        }
+
+        /* 确保内部内容在警戒线之上 */
+        .frame canvas,
+        .frame .cards-wrapper {
+            position: relative;
+            z-index: 1;
         }
 
         /* 装饰 Canvas，指针穿透 */
@@ -60,7 +91,7 @@
             z-index: 1;
         }
 
-        /* 卡片容器，位于Canvas上方 */
+        /* 卡片容器 */
         .cards-wrapper {
             position: relative;
             z-index: 2;
@@ -71,12 +102,10 @@
             gap: 50px;
             flex-wrap: wrap;
             padding: 30px;
-            pointer-events: auto;
         }
 
-        /* 卡片基本样式（警戒线边框通过伪元素实现） */
+        /* 卡片样式（无警戒线，简洁白色半透） */
         .card {
-            position: relative;
             width: 300px;
             background: rgba(255, 255, 255, 0.95);
             padding: 40px 24px;
@@ -85,36 +114,9 @@
             text-align: center;
             backdrop-filter: blur(2px);
             transition: transform 0.3s ease, box-shadow 0.3s;
-            border: 3px solid transparent;
-            background-clip: padding-box;
-            z-index: 2;
+            border: 1px solid rgba(255,255,255,0.5);
+            box-shadow: 0 12px 20px rgba(0,0,0,0.08);
         }
-
-        /* 动态警戒线边框（流动斜纹） */
-        .card::before {
-            content: '';
-            position: absolute;
-            top: -8px;
-            left: -8px;
-            right: -8px;
-            bottom: -8px;
-            background: repeating-linear-gradient(
-                45deg,
-                #FFCC00,
-                #FFCC00 15px,
-                #000000 15px,
-                #000000 30px
-            );
-            border-radius: 42px;
-            z-index: -1;
-            animation: flowBorder 4s linear infinite;
-        }
-
-        @keyframes flowBorder {
-            0% { background-position: 0 0; }
-            100% { background-position: 60px 60px; }
-        }
-
         .card:hover {
             transform: translateY(-10px);
             box-shadow: 0 25px 35px -12px rgba(0,0,0,0.2);
@@ -166,7 +168,6 @@
         let width, height;
         let angle = 0;
         let startTime = null;
-        let swordOffset = 0;
         let swordTime = 0;
 
         let sunCenter = { x: 0, y: 0 };
