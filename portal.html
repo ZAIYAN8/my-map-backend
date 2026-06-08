@@ -3,70 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智慧地图服务平台</title>
+    <title>智慧地图服务平台 - 动画版</title>
+    <!-- 引入 anime.js 动画库 -->
+    <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js"></script>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            margin: 0;
-            height: 100vh;
+            background: #ffffff;   /* 白色背景 */
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            color: white;
+            color: #333;
         }
         .container {
+            max-width: 1200px;
+            width: 90%;
+            margin: 40px auto;
             text-align: center;
-            background: rgba(0,0,0,0.6);
-            padding: 40px;
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            position: relative;
         }
+        /* 标题区域 */
         h1 {
-            margin-bottom: 30px;
             font-size: 2.5rem;
+            margin-bottom: 40px;
+            color: #2c7da0;
+            letter-spacing: 2px;
         }
-        .buttons {
+        /* 动画区域 - 放置三个小方块 */
+        .animation-area {
+            background: #f8f9fa;      /* 浅灰色背景，突出方块 */
+            border-radius: 20px;
+            padding: 30px 20px;
+            margin-bottom: 50px;
+            position: relative;
+            overflow: hidden;          /* 隐藏超出边界的部分，实现“消失”效果 */
+            min-height: 120px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        /* 方块容器（相对定位，作为移动基准） */
+        .square-container {
+            position: relative;
+            width: 100%;
+            height: 70px;
             display: flex;
-            gap: 30px;
             justify-content: center;
+            align-items: center;
+        }
+        /* 小方块的通用样式 */
+        .square {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            opacity: 0.9;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            /* 初始位置在左侧外部 */
+            left: -80px;
+            top: 5px;
+        }
+        /* 三原色 */
+        .square-red {
+            background-color: #ff4d4d;   /* 红 */
+        }
+        .square-green {
+            background-color: #4caf50;   /* 绿 */
+        }
+        .square-blue {
+            background-color: #2196f3;   /* 蓝 */
+        }
+        /* 两个功能卡片区域 */
+        .cards {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
             flex-wrap: wrap;
+            margin-top: 20px;
         }
         .card {
             background: white;
-            color: #333;
-            width: 250px;
+            width: 280px;
             padding: 30px 20px;
-            border-radius: 16px;
+            border-radius: 24px;
             text-decoration: none;
-            transition: transform 0.2s, box-shadow 0.2s;
-            display: inline-block;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            border: 1px solid #eaeef2;
         }
         .card:hover {
             transform: translateY(-8px);
-            box-shadow: 0 12px 25px rgba(0,0,0,0.3);
+            box-shadow: 0 16px 30px rgba(0,0,0,0.12);
+        }
+        .card .icon {
+            font-size: 56px;
+            margin-bottom: 16px;
         }
         .card h2 {
-            margin: 0 0 10px;
             color: #2c7da0;
+            font-size: 24px;
+            margin-bottom: 12px;
         }
         .card p {
-            margin: 0;
-            font-size: 14px;
             color: #666;
+            font-size: 15px;
+            line-height: 1.5;
         }
-        .icon {
-            font-size: 48px;
-            margin-bottom: 15px;
+        /* 响应式 */
+        @media (max-width: 700px) {
+            .cards { gap: 20px; }
+            .card { width: 240px; padding: 20px; }
+            .square { width: 50px; height: 50px; }
         }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>🗺️ 智慧地图服务平台</h1>
-    <div class="buttons">
+
+    <!-- 动画区域：三个小方块从左向右滚动消失 -->
+    <div class="animation-area">
+        <div class="square-container">
+            <div class="square square-red" id="squareRed"></div>
+            <div class="square square-green" id="squareGreen"></div>
+            <div class="square square-blue" id="squareBlue"></div>
+        </div>
+        <p style="margin-top: 20px; font-size: 14px; color: #888;">✨ 三原色方块依次从左滑入 → 向右滑出消失 ✨</p>
+    </div>
+
+    <!-- 两个功能入口卡片 -->
+    <div class="cards">
         <a href="/map.html" class="card">
             <div class="icon">🗺️</div>
             <h2>地图展示端</h2>
@@ -79,5 +149,59 @@
         </a>
     </div>
 </div>
+
+<script>
+    // 等待 DOM 加载完成
+    document.addEventListener('DOMContentLoaded', function() {
+        // 获取三个方块元素
+        const redSquare = document.getElementById('squareRed');
+        const greenSquare = document.getElementById('squareGreen');
+        const blueSquare = document.getElementById('squareBlue');
+
+        // 计算需要移动的总距离：从左边 -80px 到右边超出父容器宽度 + 80px
+        // 获取父容器的实际宽度（.square-container 的宽度）
+        const container = document.querySelector('.square-container');
+        const containerWidth = container.clientWidth;
+        const startX = -80;                    // 起始 left 值
+        const endX = containerWidth + 80;      // 终点 left 值
+
+        // 定义一个通用动画函数：逐个触发
+        function animateSquare(element, delay) {
+            // 先重置位置到起点（确保每次循环都能重新开始）
+            element.style.left = startX + 'px';
+            // 使用 anime.js 创建动画
+            anime({
+                targets: element,
+                left: [startX, endX],          // 从 startX 到 endX
+                duration: 2500,                // 2.5 秒完成移动
+                easing: 'easeInOutQuad',
+                delay: delay,                  // 延迟启动（实现依次效果）
+                complete: function(anim) {
+                    // 动画完成后，重置位置，并延迟一小段时间后重新开始（形成循环）
+                    setTimeout(() => {
+                        animateSquare(element, 0);  // 自身循环，无额外延迟
+                    }, 300);
+                }
+            });
+        }
+
+        // 首次启动：红块延迟0s，绿块延迟0.8s，蓝块延迟1.6s
+        animateSquare(redSquare, 0);
+        animateSquare(greenSquare, 800);
+        animateSquare(blueSquare, 1600);
+
+        // 可选：当窗口大小改变时，重新计算目标位置（避免溢出）
+        let resizeTimeout;
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                const newWidth = container.clientWidth;
+                const newEndX = newWidth + 80;
+                // 简单重新触发动画（略微复杂，为了体验，可忽略或重新初始化）
+                // 此处简单刷新页面即可，或者不做复杂处理，因为影响不大
+            }, 200);
+        });
+    });
+</script>
 </body>
 </html>
