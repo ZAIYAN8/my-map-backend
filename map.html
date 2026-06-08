@@ -2,32 +2,22 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>地图展示 - 高德底图 + 底图切换</title>
+    <title>地图展示 - 多底图切换</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'Microsoft YaHei', sans-serif;
-        }
-        #map {
-            height: 100vh;
-            width: 100%;
-        }
-        /* 右上角城市筛选栏 */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', sans-serif; }
+        #map { height: 100vh; width: 100%; }
         .filter-bar {
             position: fixed;
             top: 20px;
             right: 20px;
             z-index: 1001;
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255,255,255,0.95);
             padding: 10px 15px;
             border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
             font-size: 14px;
             font-weight: bold;
             display: flex;
@@ -35,91 +25,45 @@
             gap: 10px;
             backdrop-filter: blur(4px);
         }
-        .filter-bar select {
+        .filter-bar select, .refresh-btn {
             padding: 6px 12px;
             border-radius: 6px;
             border: 1px solid #ccc;
-            font-size: 14px;
             cursor: pointer;
         }
         .refresh-btn {
             background: #2c7da0;
             color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 6px 12px;
-            cursor: pointer;
-            font-size: 14px;
         }
-        /* 右下角弹窗面板 */
         .info-panel {
             position: fixed;
             bottom: 20px;
             right: 20px;
             width: 420px;
             max-width: 90vw;
-            background: rgba(255, 255, 255, 0.96);
+            background: rgba(255,255,255,0.96);
             border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
             padding: 20px;
             font-size: 15px;
             z-index: 1000;
             display: none;
             backdrop-filter: blur(8px);
             border-left: 6px solid #3498db;
-            transition: 0.2s;
         }
-        .info-panel h3 {
-            margin: 0 0 12px 0;
-            color: #2c7da0;
-            font-size: 20px;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 6px;
-        }
-        .info-panel img {
-            max-width: 100%;
-            max-height: 200px;
-            object-fit: cover;
-            border-radius: 10px;
-            margin: 12px 0;
-            display: block;
-        }
-        .info-panel p {
-            margin: 8px 0;
-            line-height: 1.5;
-            color: #333;
-        }
-        .info-panel .location {
-            font-size: 13px;
-            color: #666;
-            margin-top: 10px;
-            border-top: 1px dashed #ccc;
-            padding-top: 8px;
-        }
-        .close-panel {
-            float: right;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 18px;
-            color: #888;
-            transition: 0.2s;
-        }
-        .close-panel:hover {
-            color: #333;
-        }
-        .empty-panel {
-            color: #999;
-            text-align: center;
-            padding: 20px;
-        }
+        .info-panel h3 { margin:0 0 12px 0; color:#2c7da0; font-size:20px; border-bottom:1px solid #ddd; padding-bottom:6px; }
+        .info-panel img { max-width:100%; max-height:200px; border-radius:10px; margin:12px 0; }
+        .info-panel p { margin:8px 0; line-height:1.5; color:#333; }
+        .info-panel .location { font-size:13px; color:#666; margin-top:10px; border-top:1px dashed #ccc; padding-top:8px; }
+        .close-panel { float:right; cursor:pointer; font-weight:bold; font-size:18px; color:#888; }
+        .close-panel:hover { color:#333; }
+        .empty-panel { color:#999; text-align:center; padding:20px; }
     </style>
 </head>
 <body>
 <div class="filter-bar">
     <span>📍 选择城市：</span>
-    <select id="citySelect">
-        <option value="all">全部</option>
-    </select>
+    <select id="citySelect"><option value="all">全部</option></select>
     <button class="refresh-btn" onclick="location.reload();">🔄 刷新数据</button>
 </div>
 <div id="map"></div>
@@ -129,38 +73,32 @@
 </div>
 
 <script>
-    // 高德底图配置
-    const amapVec = L.tileLayer('https://webrd{s}.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scale=1&style=8', {
-        subdomains: ['0', '1', '2', '3'],
-        maxZoom: 18,
-        attribution: '© 高德地图'
+    // 底图1: OpenStreetMap (稳定, 无key)
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap 贡献者',
+        maxZoom: 19
     });
-    const amapImg = L.tileLayer('https://webst{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}', {
-        subdomains: ['0', '1', '2', '3'],
-        maxZoom: 18,
-        attribution: '© 高德地图'
+    // 底图2: Google 卫星影像 (可能被部分地区限制, 但通常可用)
+    const googleSat = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        attribution: '© Google'
     });
-    const amapLabel = L.tileLayer('https://webst{s}.is.autonavi.com/appmaptile?style=8&x={x}&y={y}&z={z}', {
-        subdomains: ['0', '1', '2', '3'],
-        maxZoom: 18,
-        attribution: '© 高德地图'
+    // 底图3: Google 路网
+    const googleRoad = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        attribution: '© Google'
     });
 
     const baseMaps = {
-        "高德电子地图": amapVec,
-        "高德卫星影像": amapImg,
-        "高德影像注记": amapLabel
+        "OpenStreetMap": osm,
+        "Google卫星影像": googleSat,
+        "Google路网": googleRoad
     };
 
-    // 初始化地图，默认显示电子地图
-    const map = L.map('map', {
-        layers: [amapVec]
-    }).setView([25.78912, 100.195062], 10);
-
-    // ★★★ 关键修改：将底图切换控件放在左下角 ★★★
+    const map = L.map('map', { layers: [osm] }).setView([25.78912, 100.195062], 10);
+    // 左下角底图切换控件
     L.control.layers(baseMaps, null, { position: 'bottomleft' }).addTo(map);
 
-    // 点位数据层
     let markersLayer = L.layerGroup().addTo(map);
     let allPointsData = [];
 
@@ -172,43 +110,38 @@
             const citiesSet = new Set();
             allPointsData.forEach(f => {
                 const city = f.properties.city;
-                if (city && city.trim() !== '') citiesSet.add(city);
+                if (city && city.trim()) citiesSet.add(city);
             });
             const citySelect = document.getElementById('citySelect');
             citiesSet.forEach(city => {
-                const option = document.createElement('option');
-                option.value = city;
-                option.textContent = city;
-                citySelect.appendChild(option);
+                const opt = document.createElement('option');
+                opt.value = city;
+                opt.textContent = city;
+                citySelect.appendChild(opt);
             });
             filterPointsByCity('all');
-        } catch (err) {
-            console.error('加载点位失败:', err);
-        }
+        } catch (err) { console.error('加载点位失败:', err); }
     }
 
     function filterPointsByCity(selectedCity) {
         markersLayer.clearLayers();
-        let filtered = (selectedCity === 'all') ? allPointsData : allPointsData.filter(f => f.properties.city === selectedCity);
-        if (filtered.length === 0) return;
+        const filtered = (selectedCity === 'all') ? allPointsData : allPointsData.filter(f => f.properties.city === selectedCity);
+        if (!filtered.length) return;
         const bounds = [];
-        filtered.forEach(feature => {
-            const props = feature.properties;
-            const coords = feature.geometry.coordinates;
+        filtered.forEach(f => {
+            const coords = f.geometry.coordinates;
             const latlng = [coords[1], coords[0]];
             bounds.push(latlng);
             const marker = L.marker(latlng).addTo(markersLayer);
-            marker.on('click', () => showInfo(props));
+            marker.on('click', () => showInfo(f.properties));
         });
-        if (bounds.length > 0) {
-            map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50] });
-        }
+        map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50] });
     }
 
     function showInfo(props) {
         const panel = document.getElementById('infoPanel');
         const content = document.getElementById('panelContent');
-        let imgUrl = props.image_url || '';
+        const imgUrl = props.image_url || '';
         content.innerHTML = `
             <h3>${escapeHtml(props.name) || '未命名'}</h3>
             ${imgUrl ? `<img src="${imgUrl}" alt="图片" onerror="this.onerror=null;this.src='';this.alt='图片加载失败'">` : ''}
@@ -218,25 +151,10 @@
         panel.style.display = 'block';
     }
 
-    function closePanel() {
-        document.getElementById('infoPanel').style.display = 'none';
-    }
+    function closePanel() { document.getElementById('infoPanel').style.display = 'none'; }
+    function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
 
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str.replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        });
-    }
-
-    document.getElementById('citySelect').addEventListener('change', function(e) {
-        filterPointsByCity(e.target.value);
-        closePanel();
-    });
-
+    document.getElementById('citySelect').addEventListener('change', e => { filterPointsByCity(e.target.value); closePanel(); });
     loadAllPoints();
 </script>
 </body>
