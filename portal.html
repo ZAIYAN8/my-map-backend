@@ -2,361 +2,357 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智慧地图服务平台 - 外围警戒线+装饰特效</title>
+    <title>地图展示 - 轮回眼结界</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            user-select: none;
         }
-
-        /* 整体背景虚化 */
         body {
-            min-height: 100vh;
-            background: url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=2070&auto=format') center/cover no-repeat fixed;
-            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            backdrop-filter: blur(12px);
-            background: rgba(255, 255, 255, 0.2);
-            z-index: -1;
-        }
-
-        /* 主边框容器 */
-        .frame {
-            position: relative;
-            width: 1100px;
-            max-width: 90vw;
-            min-height: 85vh;
-            background: rgba(255, 255, 255, 0.92);
-            border-radius: 48px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255,255,255,0.8);
-            backdrop-filter: blur(0px);
-            border: 2px solid rgba(255,255,240,0.6);
+            font-family: 'Microsoft YaHei', sans-serif;
             overflow: hidden;
-            margin: 30px;
-            /* 警戒线伪元素放在最底层 */
-            isolation: isolate;
         }
-
-        /* 静态警戒线（覆盖边框区域约30%，不影响内部内容） */
-        .frame::before {
-            content: '';
+        /* 地图容器相对定位，用于放置轮回眼Canvas */
+        #map-container {
+            position: relative;
+            height: 100vh;
+            width: 100%;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        /* 轮回眼Canvas覆盖在地图上，不遮挡交互 */
+        .rinnegan-canvas {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: repeating-linear-gradient(
-                45deg,
-                #FFCC00,
-                #FFCC00 12px,
-                #000000 12px,
-                #000000 24px
-            );
-            opacity: 0.3;          /* 控制覆盖强度，不遮挡内部 */
-            mix-blend-mode: multiply; /* 产生混乱融合感 */
-            pointer-events: none;   /* 让点击穿透 */
-            z-index: 0;
-            border-radius: 48px;
+            pointer-events: none;   /* 让点击穿透到地图 */
+            z-index: 10;
+            opacity: 0.3;           /* 半透明，不影响地图辨识 */
         }
 
-        /* 确保内部内容在警戒线之上 */
-        .frame canvas,
-        .frame .cards-wrapper {
-            position: relative;
-            z-index: 1;
-        }
-
-        /* 装饰 Canvas，指针穿透 */
-        #decorCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        /* 卡片容器 */
-        .cards-wrapper {
-            position: relative;
-            z-index: 2;
+        /* 右上角筛选栏 */
+        .filter-bar {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+            background: rgba(255,255,255,0.95);
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            font-size: 14px;
+            font-weight: bold;
             display: flex;
-            justify-content: center;
             align-items: center;
-            min-height: 85vh;
-            gap: 50px;
-            flex-wrap: wrap;
-            padding: 30px;
+            gap: 10px;
+            backdrop-filter: blur(4px);
+        }
+        .filter-bar select, .refresh-btn {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+        }
+        .refresh-btn {
+            background: #2c7da0;
+            color: white;
         }
 
-        /* 卡片样式（无警戒线，简洁白色半透） */
-        .card {
-            width: 300px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 40px 24px;
-            border-radius: 36px;
-            text-decoration: none;
-            text-align: center;
-            backdrop-filter: blur(2px);
-            transition: transform 0.3s ease, box-shadow 0.3s;
-            border: 1px solid rgba(255,255,255,0.5);
-            box-shadow: 0 12px 20px rgba(0,0,0,0.08);
-        }
-        .card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 25px 35px -12px rgba(0,0,0,0.2);
-        }
-        .card .icon {
-            font-size: 64px;
-            margin-bottom: 16px;
-        }
-        .card h2 {
-            color: #2c7da0;
-            font-size: 28px;
-            margin-bottom: 12px;
-        }
-        .card p {
-            color: #4a5b66;
+        /* 右侧信息面板 */
+        .info-panel {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            bottom: 20px;
+            width: 420px;
+            max-width: 90vw;
+            background: rgba(255, 255, 255, 0.96);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            padding: 20px;
             font-size: 15px;
+            z-index: 1000;
+            display: none;
+            backdrop-filter: blur(8px);
+            border-left: 6px solid #3498db;
+            overflow-y: auto;
+        }
+        .info-panel h3 {
+            margin: 0 0 12px 0;
+            color: #2c7da0;
+            font-size: 20px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 6px;
+        }
+        .info-panel img {
+            max-width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin: 12px 0;
+        }
+        .info-panel p {
+            margin: 8px 0;
             line-height: 1.5;
+            color: #333;
+        }
+        .info-panel .location {
+            font-size: 13px;
+            color: #666;
+            margin-top: 10px;
+            border-top: 1px dashed #ccc;
+            padding-top: 8px;
+        }
+        .close-panel {
+            float: right;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 18px;
+            color: #888;
+        }
+        .close-panel:hover { color: #333; }
+        .empty-panel {
+            color: #999;
+            text-align: center;
+            padding: 20px;
         }
 
-        @media (max-width: 800px) {
-            .frame { width: 95vw; }
-            .cards-wrapper { gap: 30px; padding: 20px; }
-            .card { width: 260px; padding: 24px 16px; }
+        @media (max-width: 768px) {
+            .info-panel { width: 300px; top: 70px; right: 10px; bottom: 10px; }
+            .filter-bar { top: 10px; right: 10px; padding: 6px 10px; }
         }
     </style>
 </head>
 <body>
-<div class="frame">
-    <canvas id="decorCanvas"></canvas>
-    <div class="cards-wrapper">
-        <a href="/map.html" class="card">
-            <div class="icon">🗺️</div>
-            <h2>地图展示端</h2>
-            <p>浏览点位、查看影像底图、点击获取详情</p>
-        </a>
-        <a href="/admin.html" class="card">
-            <div class="icon">⚙️</div>
-            <h2>运维管理端</h2>
-            <p>增删改查点位、上传图片、数据维护</p>
-        </a>
-    </div>
+<div id="map-container">
+    <div id="map"></div>
+    <!-- 轮回眼 Canvas 装饰层 -->
+    <canvas id="rinneganCanvas" class="rinnegan-canvas"></canvas>
+</div>
+
+<div class="filter-bar">
+    <span>📍 选择城市：</span>
+    <select id="citySelect"><option value="all">全部</option></select>
+    <button class="refresh-btn" onclick="location.reload();">🔄 刷新数据</button>
+</div>
+<div id="infoPanel" class="info-panel">
+    <span class="close-panel" onclick="closePanel()">×</span>
+    <div id="panelContent"><div class="empty-panel">✨ 点击地图上的标记<br>显示详细信息</div></div>
 </div>
 
 <script>
-    (function() {
-        const canvas = document.getElementById('decorCanvas');
-        const frame = document.querySelector('.frame');
-        let ctx = canvas.getContext('2d');
-        let width, height;
-        let angle = 0;
-        let startTime = null;
-        let swordTime = 0;
+    // ------------------------------
+    // 1. 地图初始化 (Leaflet)
+    // ------------------------------
+    const esriImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP',
+        maxZoom: 18
+    });
+    const esriStreet = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Esri, HERE, Garmin, USGS',
+        maxZoom: 18
+    });
+    const baseMaps = {
+        "Esri 卫星影像": esriImagery,
+        "Esri 电子地图": esriStreet
+    };
 
-        let sunCenter = { x: 0, y: 0 };
-        const sunRadius = 70;
-        const triangleRadius = 100;
-        const triSize = 16;
-        const colors = ['#FF4D4D', '#4CAF50', '#2196F3'];
-        let grassBase = { x: 0, y: 0 };
-        let swordBase = { x: 0, y: 0 };
-        let cameraPos = { x: 0, y: 0 };
-        let frameRect = { left: 20, top: 20, right: 0, bottom: 0 };
+    const map = L.map('map', {
+        layers: [esriImagery],
+        maxZoom: 18,
+        minZoom: 3
+    }).setView([25.78912, 100.195062], 10);
+    L.control.layers(baseMaps, null, { position: 'bottomleft' }).addTo(map);
 
-        function updateSize() {
-            const rect = frame.getBoundingClientRect();
-            width = rect.width;
-            height = rect.height;
-            canvas.width = width;
-            canvas.height = height;
+    let markersLayer = L.layerGroup().addTo(map);
+    let allPointsData = [];
 
-            sunCenter.x = sunRadius * 0.85;
-            sunCenter.y = sunRadius * 0.85;
+    async function loadPoints() {
+        try {
+            const res = await fetch('/api/points');
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            allPointsData = data.features || [];
+            const cities = new Set();
+            allPointsData.forEach(f => {
+                const city = f.properties.city;
+                if (city && city.trim()) cities.add(city);
+            });
+            const citySelect = document.getElementById('citySelect');
+            cities.forEach(city => {
+                const opt = document.createElement('option');
+                opt.value = city;
+                opt.textContent = city;
+                citySelect.appendChild(opt);
+            });
+            filterByCity('all');
+        } catch (err) {
+            console.error('加载点位失败:', err);
+            document.getElementById('panelContent').innerHTML = '<div class="empty-panel">❌ 加载点位数据失败</div>';
+        }
+    }
 
-            grassBase.x = width - 110;
-            grassBase.y = 95;
-            swordBase.x = grassBase.x - 10;
-            swordBase.y = grassBase.y + 8;
-            cameraPos.x = 80;
-            cameraPos.y = height - 80;
-            frameRect = { left: 20, top: 20, right: width - 20, bottom: height - 20 };
+    function filterByCity(selected) {
+        markersLayer.clearLayers();
+        const filtered = (selected === 'all') ? allPointsData : allPointsData.filter(f => f.properties.city === selected);
+        if (filtered.length === 0) return;
+        const bounds = [];
+        filtered.forEach(f => {
+            const coords = f.geometry.coordinates;
+            const latlng = [coords[1], coords[0]];
+            bounds.push(latlng);
+            const marker = L.marker(latlng).addTo(markersLayer);
+            marker.on('click', () => showInfo(f.properties));
+        });
+        map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50] });
+    }
+
+    function showInfo(props) {
+        const panel = document.getElementById('infoPanel');
+        const content = document.getElementById('panelContent');
+        const imgUrl = props.image_url || '';
+        content.innerHTML = `
+            <h3>${escapeHtml(props.name) || '未命名'}</h3>
+            ${imgUrl ? `<img src="${imgUrl}" alt="图片" onerror="this.onerror=null;this.src='';this.alt='图片加载失败'">` : ''}
+            <p>${escapeHtml(props.description) || '暂无描述'}</p>
+            <div class="location">📍 ${escapeHtml(props.city) || ''}${props.city && props.province ? '，' : ''}${escapeHtml(props.province) || ''}</div>
+        `;
+        panel.style.display = 'block';
+    }
+
+    function closePanel() { document.getElementById('infoPanel').style.display = 'none'; }
+    function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
+
+    document.getElementById('citySelect').addEventListener('change', e => { filterByCity(e.target.value); closePanel(); });
+    loadPoints();
+
+    // ------------------------------
+    // 2. 轮回眼绘制 (Canvas 装饰)
+    // ------------------------------
+    const canvas = document.getElementById('rinneganCanvas');
+    let ctx = canvas.getContext('2d');
+    let angle = 0;          // 勾玉旋转角度
+    let animationId = null;
+
+    function resizeCanvas() {
+        const container = document.getElementById('map-container');
+        canvas.width = container.clientWidth;
+        canvas.height = container.clientHeight;
+        drawRinnegan();
+    }
+
+    // 绘制一个勾玉 (中心在 (x,y), 半径 r, 旋转角度 rot)
+    function drawTama(x, y, r, rot) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rot);
+        ctx.beginPath();
+        // 使用贝塞尔曲线绘制勾玉形状
+        ctx.moveTo(0, -r);
+        ctx.quadraticCurveTo(r * 0.8, -r * 0.6, r * 0.6, 0);
+        ctx.quadraticCurveTo(r * 0.8, r * 0.6, 0, r);
+        ctx.quadraticCurveTo(-r * 0.8, r * 0.6, -r * 0.6, 0);
+        ctx.quadraticCurveTo(-r * 0.8, -r * 0.6, 0, -r);
+        ctx.fillStyle = 'rgba(80, 60, 140, 0.7)';
+        ctx.shadowBlur = 0;
+        ctx.fill();
+        // 中心圆点
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.25, 0, 2 * Math.PI);
+        ctx.fillStyle = '#B87333';
+        ctx.fill();
+        ctx.restore();
+    }
+
+    function drawRinnegan() {
+        if (!ctx) return;
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+        const centerX = w / 2;
+        const centerY = h / 2;
+        const maxRadius = Math.min(w, h) * 0.35;   // 巨大但留边
+
+        // 半透明紫色调
+        ctx.save();
+        ctx.globalAlpha = 0.28;   // 半透明，不遮挡地图
+
+        // 1. 最外圈波纹
+        for (let i = 0; i < 5; i++) {
+            const r = maxRadius - i * (maxRadius / 6);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, r, 0, 2 * Math.PI);
+            ctx.strokeStyle = `rgba(120, 100, 180, ${0.3 - i * 0.05})`;
+            ctx.lineWidth = 3;
+            ctx.stroke();
         }
 
-        function drawQuarterSun() {
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(sunCenter.x, sunCenter.y, sunRadius, -Math.PI / 2, 0);
-            ctx.lineTo(sunCenter.x, sunCenter.y);
-            ctx.closePath();
-            ctx.fillStyle = '#FFF9EA';
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = 'rgba(255,200,100,0.6)';
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(sunCenter.x - 5, sunCenter.y - 5, 12, 0, Math.PI * 2);
-            ctx.fillStyle = '#FFFFF0';
-            ctx.fill();
-            for (let i = 0; i < 24; i++) {
-                let rad = i * Math.PI * 2 / 24;
-                let x1 = sunCenter.x + (sunRadius + 2) * Math.cos(rad);
-                let y1 = sunCenter.y + (sunRadius + 2) * Math.sin(rad);
-                let x2 = sunCenter.x + (sunRadius + 12) * Math.cos(rad);
-                let y2 = sunCenter.y + (sunRadius + 12) * Math.sin(rad);
-                ctx.beginPath();
-                ctx.moveTo(x1, y1);
-                ctx.lineTo(x2, y2);
-                ctx.strokeStyle = '#FFD966';
-                ctx.lineWidth = 1.5;
-                ctx.stroke();
-            }
-            ctx.restore();
+        // 2. 内圈实心
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, maxRadius * 0.75, 0, 2 * Math.PI);
+        ctx.fillStyle = 'rgba(60, 40, 100, 0.35)';
+        ctx.fill();
+        ctx.strokeStyle = '#a67c00';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // 3. 中心圆
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, maxRadius * 0.25, 0, 2 * Math.PI);
+        ctx.fillStyle = 'rgba(180, 130, 50, 0.6)';
+        ctx.fill();
+        ctx.stroke();
+
+        // 4. 勾玉阵列 (6个，绕中心旋转)
+        const tamaRadius = maxRadius * 0.22;
+        const orbitRadius = maxRadius * 0.55;
+        const tamaCount = 6;
+        for (let i = 0; i < tamaCount; i++) {
+            const rad = angle + (i * Math.PI * 2 / tamaCount);
+            const x = centerX + orbitRadius * Math.cos(rad);
+            const y = centerY + orbitRadius * Math.sin(rad);
+            drawTama(x, y, tamaRadius, rad + Math.PI / 2);
         }
 
-        function drawTriangle(x, y, color, angleRad) {
-            ctx.save();
-            ctx.translate(x, y);
-            ctx.rotate(angleRad);
+        // 额外添加一圈小勾玉（可选，轮回眼细节）
+        const smallOrbit = maxRadius * 0.38;
+        const smallTamaRadius = maxRadius * 0.1;
+        for (let i = 0; i < 12; i++) {
+            const rad = -angle * 0.5 + (i * Math.PI * 2 / 12);
+            const x = centerX + smallOrbit * Math.cos(rad);
+            const y = centerY + smallOrbit * Math.sin(rad);
             ctx.beginPath();
-            const size = triSize;
-            ctx.moveTo(0, -size);
-            ctx.lineTo(size * 0.866, size * 0.5);
-            ctx.lineTo(-size * 0.866, size * 0.5);
-            ctx.closePath();
-            ctx.fillStyle = color;
-            ctx.shadowBlur = 6;
-            ctx.fill();
-            ctx.restore();
-        }
-
-        function drawGrass() {
-            ctx.save();
-            ctx.translate(grassBase.x, grassBase.y);
-            ctx.scale(1, -1);
-            ctx.beginPath();
-            for (let i = -30; i <= 30; i += 12) {
-                ctx.moveTo(i, 0);
-                ctx.quadraticCurveTo(i+6, -18, i+10, -8);
-                ctx.quadraticCurveTo(i+2, -20, i, -6);
-            }
-            ctx.fillStyle = '#6B8E23';
-            ctx.fill();
-            for (let i = -25; i <= 25; i += 8) {
-                ctx.beginPath();
-                ctx.moveTo(i, 0);
-                ctx.lineTo(i-4, -22);
-                ctx.lineTo(i+4, -18);
-                ctx.fill();
-            }
-            ctx.restore();
-            ctx.beginPath();
-            ctx.ellipse(grassBase.x - 6, grassBase.y + 5, 20, 10, 0, 0, Math.PI*2);
-            ctx.fillStyle = '#8B5A2B';
+            ctx.arc(x, y, smallTamaRadius, 0, 2 * Math.PI);
+            ctx.fillStyle = 'rgba(200, 160, 80, 0.5)';
             ctx.fill();
         }
 
-        function drawSword(offsetY) {
-            let x = swordBase.x;
-            let y = swordBase.y + offsetY;
-            ctx.save();
-            ctx.translate(x, y);
-            ctx.rotate(Math.PI / 18);
-            ctx.fillStyle = '#8B5A2B';
-            ctx.fillRect(-4, -6, 8, 18);
-            ctx.fillStyle = '#DAA520';
-            ctx.fillRect(-2, -10, 4, 8);
-            ctx.fillStyle = '#C0C0C0';
-            ctx.beginPath();
-            ctx.moveTo(0, -22);
-            ctx.lineTo(-4, -8);
-            ctx.lineTo(4, -8);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.moveTo(0, -28);
-            ctx.lineTo(-3, -22);
-            ctx.lineTo(3, -22);
-            ctx.fillStyle = '#E0E0E0';
-            ctx.fill();
-            ctx.restore();
-        }
+        ctx.restore();
+    }
 
-        function drawCamera() {
-            let x = cameraPos.x, y = cameraPos.y;
-            ctx.save();
-            ctx.fillStyle = '#2C3E50';
-            ctx.beginPath();
-            ctx.rect(x-35, y-25, 70, 50);
-            ctx.fill();
-            ctx.fillStyle = '#1A1F2E';
-            ctx.beginPath();
-            ctx.ellipse(x, y, 24, 24, 0, 0, Math.PI*2);
-            ctx.fill();
-            ctx.fillStyle = '#4B6E8A';
-            ctx.beginPath();
-            ctx.ellipse(x, y, 18, 18, 0, 0, Math.PI*2);
-            ctx.fill();
-            ctx.fillStyle = '#7F8C8D';
-            ctx.beginPath();
-            ctx.ellipse(x, y, 12, 12, 0, 0, Math.PI*2);
-            ctx.fill();
-            ctx.fillStyle = '#111';
-            ctx.fillRect(x-20, y-35, 18, 12);
-            ctx.font = 'bold 14px "Segoe UI"';
-            ctx.fillStyle = '#F1C40F';
-            ctx.fillText('NIKON', x-18, y-18);
-            ctx.fillStyle = '#BDC3C7';
-            ctx.fillRect(x+20, y-30, 12, 8);
-            ctx.restore();
-        }
+    // 动画循环：缓慢旋转勾玉
+    function animateRinnegan() {
+        angle += 0.002;   // 每帧增加微小角度，约 10 秒一圈 (取决于帧率)
+        drawRinnegan();
+        animationId = requestAnimationFrame(animateRinnegan);
+    }
 
-        function drawTriangles(nowAngle) {
-            for (let i = 0; i < 3; i++) {
-                let triAngle = nowAngle + (i * Math.PI * 2 / 3);
-                let tx = sunCenter.x + triangleRadius * Math.cos(triAngle);
-                let ty = sunCenter.y + triangleRadius * Math.sin(triAngle);
-                if (tx < frameRect.left || tx > frameRect.right || ty < frameRect.top || ty > frameRect.bottom) continue;
-                drawTriangle(tx, ty, colors[i], triAngle + Math.PI/2);
-            }
-        }
+    window.addEventListener('resize', () => {
+        resizeCanvas();
+    });
 
-        function animate(timestamp) {
-            if (!startTime) startTime = timestamp;
-            let elapsed = (timestamp - startTime) / 1000;
-            angle = (elapsed * Math.PI * 2 / 6) % (Math.PI * 2);
-            swordTime = (elapsed % 5) / 5;
-            let swordMove = Math.sin(swordTime * Math.PI * 2) * 5;
-
-            updateSize();
-            ctx.clearRect(0, 0, width, height);
-            drawGrass();
-            drawSword(swordMove);
-            drawQuarterSun();
-            drawTriangles(angle);
-            drawCamera();
-            requestAnimationFrame(animate);
-        }
-
-        window.addEventListener('resize', () => updateSize());
-        updateSize();
-        startTime = null;
-        requestAnimationFrame(animate);
-    })();
+    // 在页面加载完成后启动
+    window.addEventListener('load', () => {
+        resizeCanvas();
+        animateRinnegan();
+    });
 </script>
 </body>
 </html>
