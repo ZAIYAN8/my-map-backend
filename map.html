@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>地图展示 - 影像底图</title>
+    <title>地图展示 - 高德底图 + 底图切换</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -18,16 +18,16 @@
             height: 100vh;
             width: 100%;
         }
-        /* 右上角筛选栏 */
+        /* --- 右上角城市筛选栏 --- */
         .filter-bar {
             position: fixed;
             top: 20px;
             right: 20px;
             z-index: 1001;
-            background: rgba(255,255,255,0.95);
+            background: rgba(255, 255, 255, 0.95);
             padding: 10px 15px;
             border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
             font-size: 14px;
             font-weight: bold;
             display: flex;
@@ -51,12 +51,12 @@
             cursor: pointer;
             font-size: 14px;
         }
-        /* 右侧信息面板 - 放大 */
+        /* --- 右下角弹窗面板 --- */
         .info-panel {
             position: fixed;
             bottom: 20px;
             right: 20px;
-            width: 420px;          /* 加宽，符合你画的范围 */
+            width: 420px;
             max-width: 90vw;
             background: rgba(255, 255, 255, 0.96);
             border-radius: 16px;
@@ -112,6 +112,18 @@
             text-align: center;
             padding: 20px;
         }
+        /* --- 左下角底图切换控件样式优化 --- */
+        .leaflet-control-custom-layers {
+            background: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+        }
+        .leaflet-control-custom-layers label {
+            margin-left: 5px;
+            font-weight: normal;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -129,10 +141,48 @@
 </div>
 
 <script>
-    const API_BASE = '';  // 相对路径
-    let map = null;
-    let markersLayer = null;
-    let allPointsData = [];   // 存储所有点位原始数据
+    // ================= 配置底图图层 =================
+    // 1. 高德标准电子地图（矢量路网 + 注记）
+    const amapVec = L.tileLayer('https://webrd{s}.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scale=1&style=8', {
+        subdomains: ['0', '1', '2', '3'],
+        maxZoom: 18,
+        attribution: '© 高德地图'
+    });
+
+    // 2. 高德卫星影像图（纯影像，无注记）
+    const amapImg = L.tileLayer('https://webst{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}', {
+        subdomains: ['0', '1', '2', '3'],
+        maxZoom: 18,
+        attribution: '© 高德地图'
+    });
+
+    // 3. 高德影像注记图（在影像图上叠加路名、地标等）
+    const amapLabel = L.tileLayer('https://webst{s}.is.autonavi.com/appmaptile?style=8&x={x}&y={y}&z={z}', {
+        subdomains: ['0', '1', '2', '3'],
+        maxZoom: 18,
+        attribution: '© 高德地图'
+    });
+
+    // 可选底图集合（默认显示电子地图）
+    const baseMaps = {
+        "高德电子地图": amapVec,
+        "高德卫星影像": amapImg,
+        "高德影像注记": amapLabel
+    };
+
+    // 初始化地图，默认使用电子地图，视角设定在云南大理周边
+    const map = L.map('map', {
+        layers: [amapVec]  // 设置默认显示的图层
+    }).setView([25.78912, 100.195062], 10);
+
+    // 添加图层切换控件（左上角）
+    L.control.layers(baseMaps).addTo(map);
+
+    // 如果你希望控件放在左下角，可以自定义，不过 Leaflet 默认的左上角位置也比较好用
+
+    // ================= 以下是点位加载与交互逻辑 =================
+    let markersLayer = L.layerGroup().addTo(map);
+    let allPointsData = [];
 
     async function loadAllPoints() {
         try {
@@ -161,10 +211,8 @@
     }
 
     function filterPointsByCity(selectedCity) {
-        if (!map) initMap();
-        // 清除旧标记
-        if (markersLayer) markersLayer.clearLayers();
-        else markersLayer = L.layerGroup().addTo(map);
+        if (!map) return;
+        markersLayer.clearLayers();
 
         let filtered = [];
         if (selectedCity === 'all') {
@@ -174,7 +222,6 @@
         }
 
         if (filtered.length === 0) {
-            // 无数据时仍保持地图不移动，显示提示（可选）
             console.log('该城市暂无点位');
             return;
         }
@@ -198,22 +245,10 @@
         }
     }
 
-    function initMap() {
-        map = L.map('map').setView([25.78912, 100.195062], 10);
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Esri'
-        }).addTo(map);
-        markersLayer = L.layerGroup().addTo(map);
-    }
-
     function showInfo(props) {
         const panel = document.getElementById('infoPanel');
         const content = document.getElementById('panelContent');
         let imgUrl = props.image_url || '';
-        // 如果图片链接以 http 开头则直接使用，否则拼接 API_BASE（但数据库里已是完整链接）
-        if (imgUrl && !imgUrl.startsWith('http')) {
-            imgUrl = API_BASE + imgUrl;
-        }
         content.innerHTML = `
             <h3>${escapeHtml(props.name) || '未命名'}</h3>
             ${imgUrl ? `<img src="${imgUrl}" alt="图片" onerror="this.onerror=null;this.src='';this.alt='图片加载失败'">` : ''}
@@ -241,8 +276,7 @@
     document.getElementById('citySelect').addEventListener('change', function(e) {
         const city = e.target.value;
         filterPointsByCity(city);
-        // 同时关闭信息面板
-        closePanel();
+        closePanel(); // 切换城市后关闭信息面板
     });
 
     // 初始化
