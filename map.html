@@ -187,4 +187,193 @@
     loadPoints();
 </script>
 </body>
+</html><!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>地图展示 - 影像+电子底图</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', sans-serif; }
+        #map { height: 100vh; width: 100%; }
+        .filter-bar {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+            background: rgba(255,255,255,0.95);
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            font-size: 14px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            backdrop-filter: blur(4px);
+        }
+        .filter-bar select, .refresh-btn {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+        }
+        .refresh-btn {
+            background: #2c7da0;
+            color: white;
+        }
+        .info-panel {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            bottom: 20px;
+            width: 420px;
+            max-width: 90vw;
+            background: rgba(255,255,255,0.96);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            padding: 20px;
+            font-size: 15px;
+            z-index: 1000;
+            display: none;
+            backdrop-filter: blur(8px);
+            border-left: 6px solid #3498db;
+            overflow-y: auto;
+        }
+        .info-panel h3 {
+            margin: 0 0 12px 0;
+            color: #2c7da0;
+            font-size: 20px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 6px;
+        }
+        .info-panel img {
+            max-width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin: 12px 0;
+        }
+        .info-panel p {
+            margin: 8px 0;
+            line-height: 1.5;
+            color: #333;
+        }
+        .info-panel .location {
+            font-size: 13px;
+            color: #666;
+            margin-top: 10px;
+            border-top: 1px dashed #ccc;
+            padding-top: 8px;
+        }
+        .close-panel { float: right; cursor: pointer; font-weight: bold; font-size: 18px; color: #888; }
+        .close-panel:hover { color: #333; }
+        .empty-panel { color: #999; text-align: center; padding: 20px; }
+        @media (max-width: 768px) {
+            .info-panel { width: 300px; top: 70px; right: 10px; bottom: 10px; }
+            .filter-bar { top: 10px; right: 10px; padding: 6px 10px; }
+        }
+    </style>
+</head>
+<body>
+<div class="filter-bar">
+    <span>📍 选择城市：</span>
+    <select id="citySelect"><option value="all">全部</option></select>
+    <button class="refresh-btn" onclick="location.reload();">🔄 刷新数据</button>
+</div>
+<div id="map"></div>
+<div id="infoPanel" class="info-panel">
+    <span class="close-panel" onclick="closePanel()">×</span>
+    <div id="panelContent"><div class="empty-panel">✨ 点击地图上的标记<br>显示详细信息</div></div>
+</div>
+
+<script>
+    // 底图配置
+    const esriImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP',
+        maxZoom: 18
+    });
+    const esriStreet = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Esri, HERE, Garmin, USGS',
+        maxZoom: 18
+    });
+    const baseMaps = {
+        "Esri 卫星影像": esriImagery,
+        "Esri 电子地图": esriStreet
+    };
+    
+    const map = L.map('map', {
+        layers: [esriImagery],
+        maxZoom: 18,
+        minZoom: 3
+    }).setView([25.78912, 100.195062], 10);
+    L.control.layers(baseMaps, null, { position: 'bottomleft' }).addTo(map);
+
+    let markersLayer = L.layerGroup().addTo(map);
+    let allPointsData = [];
+
+    async function loadPoints() {
+        try {
+            const res = await fetch('/api/points');
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            allPointsData = data.features || [];
+            // 生成城市下拉选项
+            const cities = new Set();
+            allPointsData.forEach(f => {
+                const city = f.properties.city;
+                if (city && city.trim()) cities.add(city);
+            });
+            const citySelect = document.getElementById('citySelect');
+            cities.forEach(city => {
+                const opt = document.createElement('option');
+                opt.value = city;
+                opt.textContent = city;
+                citySelect.appendChild(opt);
+            });
+            // 显示全部点位
+            filterByCity('all');
+        } catch (err) {
+            console.error('加载点位失败:', err);
+            document.getElementById('panelContent').innerHTML = '<div class="empty-panel">❌ 加载点位数据失败，请检查后端服务</div>';
+        }
+    }
+
+    function filterByCity(selected) {
+        markersLayer.clearLayers();
+        const filtered = (selected === 'all') ? allPointsData : allPointsData.filter(f => f.properties.city === selected);
+        if (filtered.length === 0) return;
+        const bounds = [];
+        filtered.forEach(f => {
+            const coords = f.geometry.coordinates;
+            const latlng = [coords[1], coords[0]];
+            bounds.push(latlng);
+            const marker = L.marker(latlng).addTo(markersLayer);
+            marker.on('click', () => showInfo(f.properties));
+        });
+        map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50] });
+    }
+
+    function showInfo(props) {
+        const panel = document.getElementById('infoPanel');
+        const content = document.getElementById('panelContent');
+        const imgUrl = props.image_url || '';
+        content.innerHTML = `
+            <h3>${escapeHtml(props.name) || '未命名'}</h3>
+            ${imgUrl ? `<img src="${imgUrl}" alt="图片" onerror="this.onerror=null;this.src='';this.alt='图片加载失败'">` : ''}
+            <p>${escapeHtml(props.description) || '暂无描述'}</p>
+            <div class="location">📍 ${escapeHtml(props.city) || ''}${props.city && props.province ? '，' : ''}${escapeHtml(props.province) || ''}</div>
+        `;
+        panel.style.display = 'block';
+    }
+
+    function closePanel() { document.getElementById('infoPanel').style.display = 'none'; }
+    function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
+
+    document.getElementById('citySelect').addEventListener('change', e => { filterByCity(e.target.value); closePanel(); });
+    loadPoints();
+</script>
+</body>
 </html>
