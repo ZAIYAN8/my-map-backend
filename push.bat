@@ -1,6 +1,6 @@
 @echo off
 cd /d "F:\qgis\Full process"
 git add .
-git commit -m "aiwanshanban1"
+git commit -m "sc-datav_zhuomian"
 git push origin main
 pause

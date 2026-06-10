@@ -93,6 +93,8 @@
     <span>📍 选择城市：</span>
     <select id="citySelect"><option value="all">全部</option></select>
     <button class="refresh-btn" onclick="location.reload();">🔄 刷新数据</button>
+    <!-- 新增：跳转到炫酷大屏的按钮 -->
+    <button class="refresh-btn" onclick="location.href='/datav.html';">✨ 炫酷大屏</button>
 </div>
 <div id="map"></div>
 <div id="infoPanel" class="info-panel">
@@ -114,7 +116,7 @@
         "Esri 卫星影像": esriImagery,
         "Esri 电子地图": esriStreet
     };
-    
+
     const map = L.map('map', {
         layers: [esriImagery],
         maxZoom: 18,
@@ -144,7 +146,6 @@
                 opt.textContent = city;
                 citySelect.appendChild(opt);
             });
-            // 默认显示全部
             filterByCity('all');
         } catch (err) {
             console.error('加载点位失败:', err);
