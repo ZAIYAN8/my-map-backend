@@ -1,0 +1,13 @@
+requirements.txt
+mise.toml
+pyproject.toml
+Pipfile
+Pipfile.lock
+runtime.txt
+*.py
+venv/
+.venv/
+env/
+ENV/
+*.pyc
+\.python-version
