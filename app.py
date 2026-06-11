@@ -2,7 +2,7 @@ import os
 import uuid
 import psycopg2
 from functools import wraps
-from flask import Flask, jsonify, request, send_from_directory, session, redirect, url_for, abort
+from flask import Flask, jsonify, request, send_from_directory, session, redirect, abort
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from qiniu import Auth, put_file
@@ -17,20 +17,19 @@ app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-producti
 ADMIN_USER = os.environ.get('ADMIN_USER', 'admin')
 ADMIN_PASS = os.environ.get('ADMIN_PASS', 'admin123')
 
+# 上传配置
 UPLOAD_FOLDER = 'images'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+# 七牛云配置
 QINIU_ACCESS_KEY = os.environ.get('QINIU_ACCESS_KEY')
 QINIU_SECRET_KEY = os.environ.get('QINIU_SECRET_KEY')
 QINIU_BUCKET_NAME = os.environ.get('QINIU_BUCKET_NAME')
 QINIU_BASE_URL = os.environ.get('QINIU_BASE_URL')
-QINIU_BASE_URL = QINIU_BASE_URL.rstrip('/') if QINIU_BASE_URL else None
 
-if not QINIU_ACCESS_KEY or not QINIU_SECRET_KEY or not QINIU_BUCKET_NAME or not QINIU_BASE_URL:
-    raise RuntimeError("QINIU_ACCESS_KEY, QINIU_SECRET_KEY, QINIU_BUCKET_NAME 和 QINIU_BASE_URL 必须在环境变量中设置")
-
+# 数据库配置
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL environment variable not set")
@@ -49,6 +48,7 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# ---------- 登录 ----------
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -79,6 +79,7 @@ def logout():
     session.pop('logged_in', None)
     return redirect('/login')
 
+# ---------- 公开接口 ----------
 @app.route('/api/points')
 def get_points():
     conn = get_db_connection()
@@ -110,6 +111,7 @@ def get_points():
     conn.close()
     return jsonify(geojson)
 
+# ---------- 管理后台 API ----------
 @app.route('/api/admin/points', methods=['GET'])
 @admin_required
 def admin_get_points():
@@ -178,6 +180,7 @@ def delete_point(point_id):
     conn.close()
     return jsonify({'message': '删除成功'})
 
+# ---------- 图片上传 ----------
 @app.route('/api/upload', methods=['POST'])
 @admin_required
 def upload_image():
@@ -189,29 +192,25 @@ def upload_image():
     if not allowed_file(file.filename):
         return jsonify({'error': '不支持的文件类型'}), 400
 
-    if not QINIU_ACCESS_KEY or not QINIU_SECRET_KEY or not QINIU_BUCKET_NAME or not QINIU_BASE_URL:
-        return jsonify({'error': '七牛云配置未完整设置'}), 500
-
     ext = file.filename.rsplit('.', 1)[1].lower()
     new_filename = f"{uuid.uuid4().hex}.{ext}"
-    remote_key = f'images/{new_filename}'
     temp_path = os.path.join(app.config['UPLOAD_FOLDER'], new_filename)
     file.save(temp_path)
 
     try:
         q = Auth(QINIU_ACCESS_KEY, QINIU_SECRET_KEY)
-        token = q.upload_token(QINIU_BUCKET_NAME, remote_key)
-        ret, info = put_file(token, remote_key, temp_path)
-        if info and getattr(info, 'status_code', None) == 200:
-            image_url = QINIU_BASE_URL.rstrip('/') + '/' + remote_key
+        token = q.upload_token(QINIU_BUCKET_NAME)
+        ret, info = put_file(token, f'images/{new_filename}', temp_path)
+        if ret is not None:
+            image_url = QINIU_BASE_URL + f'images/{new_filename}'
             return jsonify({'image_url': image_url}), 200
         else:
-            error_msg = getattr(info, 'text', None) or str(info)
-            return jsonify({'error': f'上传到七牛云失败: {error_msg}'}), 500
+            return jsonify({'error': f'上传到七牛云失败: {info}'}), 500
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
+# ---------- 静态页面服务 ----------
 @app.route('/')
 def index():
     return send_from_directory('.', 'portal.html') if os.path.exists('portal.html') else redirect('/map.html')

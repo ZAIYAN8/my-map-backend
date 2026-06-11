@@ -93,8 +93,6 @@
     <span>📍 选择城市：</span>
     <select id="citySelect"><option value="all">全部</option></select>
     <button class="refresh-btn" onclick="location.reload();">🔄 刷新数据</button>
-    <!-- 新增：跳转到炫酷大屏的按钮（指向本地 sc-datav 的 demo0） -->
-    <button class="refresh-btn" onclick="window.open('https://knight-l.github.io/sc-datav/#/demo0', '_blank');">✨ 炫酷大屏（演示）</button>
 </div>
 <div id="map"></div>
 <div id="infoPanel" class="info-panel">
@@ -103,7 +101,6 @@
 </div>
 
 <script>
-    // 底图配置
     const esriImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP',
         maxZoom: 18
@@ -112,16 +109,8 @@
         attribution: 'Esri, HERE, Garmin, USGS',
         maxZoom: 18
     });
-    const baseMaps = {
-        "Esri 卫星影像": esriImagery,
-        "Esri 电子地图": esriStreet
-    };
-
-    const map = L.map('map', {
-        layers: [esriImagery],
-        maxZoom: 18,
-        minZoom: 3
-    }).setView([25.78912, 100.195062], 10);
+    const baseMaps = { "Esri 卫星影像": esriImagery, "Esri 电子地图": esriStreet };
+    const map = L.map('map', { layers: [esriImagery], maxZoom: 18, minZoom: 3 }).setView([25.78912, 100.195062], 10);
     L.control.layers(baseMaps, null, { position: 'bottomleft' }).addTo(map);
 
     let markersLayer = L.layerGroup().addTo(map);
@@ -133,7 +122,6 @@
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             allPointsData = data.features || [];
-            // 动态生成城市下拉选项
             const cities = new Set();
             allPointsData.forEach(f => {
                 const city = f.properties.city;
