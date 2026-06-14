@@ -225,6 +225,14 @@ def admin_page():
         return redirect('/login')
     return send_from_directory('.', 'admin.html')
 
+@app.route('/datav/')
+def datav_index():
+    return send_from_directory('datav', 'index.html')
+
+@app.route('/datav/<path:filename>')
+def datav_static(filename):
+    return send_from_directory('datav', filename)
+
 @app.route('/<path:filename>')
 def serve_static(filename):
     if filename == 'admin.html':
