@@ -4,419 +4,83 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>智慧地图服务平台</title>
+    <!-- 引入 HTML5 Boilerplate 的样式 -->
+    <link rel="stylesheet" href="css/style.css">
+    <!-- 保留原有自定义样式（如有） -->
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            user-select: none;
-        }
-
-        /* 整体背景虚化 */
+        /* 在 HTML5 Boilerplate 基础上叠加卡片样式 */
         body {
+            font-family: 'Segoe UI', 'PingFang SC', Roboto, sans-serif;
+            background: #f0f4f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             min-height: 100vh;
-            background: url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=2070&auto=format') center/cover no-repeat fixed;
-            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
+            margin: 0;
         }
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
+        .container {
+            max-width: 1200px;
             width: 100%;
-            height: 100%;
-            backdrop-filter: blur(12px);
-            background: rgba(255, 255, 255, 0.2);
-            z-index: -1;
-        }
-
-        /* 主边框容器 */
-        .frame {
-            position: relative;
-            width: 1100px;
-            max-width: 90vw;
-            min-height: 85vh;
-            background: rgba(255, 255, 255, 0.92);
-            border-radius: 48px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255,255,255,0.8);
-            backdrop-filter: blur(0px);
-            border: 2px solid rgba(255,255,240,0.6);
-            overflow: hidden;
-            margin: 30px;
-        }
-
-        /* 装饰 Canvas，指针穿透，覆盖全区域 */
-        #decorCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        /* 卡片容器，位于Canvas上方 */
-        .cards-wrapper {
-            position: relative;
-            z-index: 2;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 85vh;
-            gap: 50px;
-            flex-wrap: wrap;
-            padding: 30px;
-            pointer-events: auto;
-        }
-
-        /* 卡片样式（无警戒线，简洁白色半透） */
-        .card {
-            width: 300px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 40px 24px;
-            border-radius: 36px;
-            text-decoration: none;
+            padding: 40px;
             text-align: center;
-            backdrop-filter: blur(2px);
-            transition: transform 0.3s ease, box-shadow 0.3s;
-            border: 1px solid rgba(255,255,255,0.5);
-            box-shadow: 0 12px 20px rgba(0,0,0,0.08);
         }
-        .card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 25px 35px -12px rgba(0,0,0,0.2);
-        }
-        .card .icon {
-            font-size: 64px;
-            margin-bottom: 16px;
-        }
-        .card h2 {
-            color: #2c7da0;
-            font-size: 28px;
+        h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: #1a2a3a;
             margin-bottom: 12px;
         }
-        .card p {
-            color: #4a5b66;
-            font-size: 15px;
-            line-height: 1.5;
+        .subtitle {
+            font-size: 1.1rem;
+            color: #6b7a8a;
+            margin-bottom: 50px;
         }
-
-        @media (max-width: 800px) {
-            .frame { width: 95vw; }
-            .cards-wrapper { gap: 30px; padding: 20px; }
-            .card { width: 260px; padding: 24px 16px; }
+        .cards {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            flex-wrap: wrap;
         }
+        .card {
+            background: white;
+            border-radius: 32px;
+            padding: 40px 32px;
+            width: 320px;
+            text-decoration: none;
+            color: inherit;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+            border: 1px solid #eef2f6;
+            transition: all 0.25s ease;
+        }
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+        }
+        .icon { font-size: 56px; margin-bottom: 20px; display: block; }
+        .card h2 { font-size: 24px; font-weight: 600; color: #1a2a3a; margin-bottom: 10px; }
+        .card p { font-size: 15px; color: #6b7a8a; line-height: 1.6; margin: 0; }
+        .card .arrow { margin-top: 20px; font-size: 18px; color: #2c7da0; opacity: 0.6; transition: 0.2s; }
+        .card:hover .arrow { opacity: 1; transform: translateX(4px); }
     </style>
 </head>
 <body>
-<div class="frame">
-    <canvas id="decorCanvas"></canvas>
-    <div class="cards-wrapper">
-        <!-- 修改：使用相对路径 ./map.html 和 ./admin.html -->
+<div class="container">
+    <h1>🗺️ 智慧地图服务平台</h1>
+    <p class="subtitle">空间数据管理 · 可视化分析 · 智能运维</p>
+    <div class="cards">
         <a href="./map.html" class="card">
-            <div class="icon">🗺️</div>
+            <span class="icon">🌍</span>
             <h2>地图展示端</h2>
             <p>浏览点位、查看影像底图、点击获取详情</p>
+            <span class="arrow">→</span>
         </a>
         <a href="./admin.html" class="card">
-            <div class="icon">⚙️</div>
+            <span class="icon">⚙️</span>
             <h2>运维管理端</h2>
             <p>增删改查点位、上传图片、数据维护</p>
+            <span class="arrow">→</span>
         </a>
     </div>
 </div>
-
-<script>
-    (function() {
-        const canvas = document.getElementById('decorCanvas');
-        const frame = document.querySelector('.frame');
-        let ctx = canvas.getContext('2d');
-        let width, height;
-
-        // 原有特效参数
-        let angleTri = 0;           // 三角形公转角度
-        let startTime = null;
-        let swordTime = 0;
-        
-        // 轮回眼参数
-        let rinneganAngle = 0;      // 勾玉旋转角度
-        
-        // 原有装饰元素位置（动态计算）
-        let sunCenter = { x: 0, y: 0 };
-        const sunRadius = 70;
-        const triangleRadius = 100;
-        const triSize = 16;
-        const colors = ['#FF4D4D', '#4CAF50', '#2196F3'];
-        let grassBase = { x: 0, y: 0 };
-        let swordBase = { x: 0, y: 0 };
-        let cameraPos = { x: 0, y: 0 };
-        let frameRect = { left: 20, top: 20, right: 0, bottom: 0 };
-
-        function updateSize() {
-            const rect = frame.getBoundingClientRect();
-            width = rect.width;
-            height = rect.height;
-            canvas.width = width;
-            canvas.height = height;
-
-            // 太阳中心（左上角四分之一）
-            sunCenter.x = sunRadius * 0.85;
-            sunCenter.y = sunRadius * 0.85;
-
-            // 草地（右上角倒置）
-            grassBase.x = width - 110;
-            grassBase.y = 95;
-            swordBase.x = grassBase.x - 10;
-            swordBase.y = grassBase.y + 8;
-            cameraPos.x = 80;
-            cameraPos.y = height - 80;
-            frameRect = { left: 20, top: 20, right: width - 20, bottom: height - 20 };
-        }
-
-        // ---------- 原有特效绘制函数 ----------
-        function drawQuarterSun() {
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(sunCenter.x, sunCenter.y, sunRadius, -Math.PI / 2, 0);
-            ctx.lineTo(sunCenter.x, sunCenter.y);
-            ctx.closePath();
-            ctx.fillStyle = '#FFF9EA';
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = 'rgba(255,200,100,0.6)';
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(sunCenter.x - 5, sunCenter.y - 5, 12, 0, Math.PI * 2);
-            ctx.fillStyle = '#FFFFF0';
-            ctx.fill();
-            for (let i = 0; i < 24; i++) {
-                let rad = i * Math.PI * 2 / 24;
-                let x1 = sunCenter.x + (sunRadius + 2) * Math.cos(rad);
-                let y1 = sunCenter.y + (sunRadius + 2) * Math.sin(rad);
-                let x2 = sunCenter.x + (sunRadius + 12) * Math.cos(rad);
-                let y2 = sunCenter.y + (sunRadius + 12) * Math.sin(rad);
-                ctx.beginPath();
-                ctx.moveTo(x1, y1);
-                ctx.lineTo(x2, y2);
-                ctx.strokeStyle = '#FFD966';
-                ctx.lineWidth = 1.5;
-                ctx.stroke();
-            }
-            ctx.restore();
-        }
-
-        function drawTriangle(x, y, color, angleRad) {
-            ctx.save();
-            ctx.translate(x, y);
-            ctx.rotate(angleRad);
-            ctx.beginPath();
-            const size = triSize;
-            ctx.moveTo(0, -size);
-            ctx.lineTo(size * 0.866, size * 0.5);
-            ctx.lineTo(-size * 0.866, size * 0.5);
-            ctx.closePath();
-            ctx.fillStyle = color;
-            ctx.shadowBlur = 6;
-            ctx.fill();
-            ctx.restore();
-        }
-
-        function drawGrass() {
-            ctx.save();
-            ctx.translate(grassBase.x, grassBase.y);
-            ctx.scale(1, -1);
-            ctx.beginPath();
-            for (let i = -30; i <= 30; i += 12) {
-                ctx.moveTo(i, 0);
-                ctx.quadraticCurveTo(i+6, -18, i+10, -8);
-                ctx.quadraticCurveTo(i+2, -20, i, -6);
-            }
-            ctx.fillStyle = '#6B8E23';
-            ctx.fill();
-            for (let i = -25; i <= 25; i += 8) {
-                ctx.beginPath();
-                ctx.moveTo(i, 0);
-                ctx.lineTo(i-4, -22);
-                ctx.lineTo(i+4, -18);
-                ctx.fill();
-            }
-            ctx.restore();
-            ctx.beginPath();
-            ctx.ellipse(grassBase.x - 6, grassBase.y + 5, 20, 10, 0, 0, Math.PI*2);
-            ctx.fillStyle = '#8B5A2B';
-            ctx.fill();
-        }
-
-        function drawSword(offsetY) {
-            let x = swordBase.x;
-            let y = swordBase.y + offsetY;
-            ctx.save();
-            ctx.translate(x, y);
-            ctx.rotate(Math.PI / 18);
-            ctx.fillStyle = '#8B5A2B';
-            ctx.fillRect(-4, -6, 8, 18);
-            ctx.fillStyle = '#DAA520';
-            ctx.fillRect(-2, -10, 4, 8);
-            ctx.fillStyle = '#C0C0C0';
-            ctx.beginPath();
-            ctx.moveTo(0, -22);
-            ctx.lineTo(-4, -8);
-            ctx.lineTo(4, -8);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.moveTo(0, -28);
-            ctx.lineTo(-3, -22);
-            ctx.lineTo(3, -22);
-            ctx.fillStyle = '#E0E0E0';
-            ctx.fill();
-            ctx.restore();
-        }
-
-        function drawCamera() {
-            let x = cameraPos.x, y = cameraPos.y;
-            ctx.save();
-            ctx.fillStyle = '#2C3E50';
-            ctx.beginPath();
-            ctx.rect(x-35, y-25, 70, 50);
-            ctx.fill();
-            ctx.fillStyle = '#1A1F2E';
-            ctx.beginPath();
-            ctx.ellipse(x, y, 24, 24, 0, 0, Math.PI*2);
-            ctx.fill();
-            ctx.fillStyle = '#4B6E8A';
-            ctx.beginPath();
-            ctx.ellipse(x, y, 18, 18, 0, 0, Math.PI*2);
-            ctx.fill();
-            ctx.fillStyle = '#7F8C8D';
-            ctx.beginPath();
-            ctx.ellipse(x, y, 12, 12, 0, 0, Math.PI*2);
-            ctx.fill();
-            ctx.fillStyle = '#111';
-            ctx.fillRect(x-20, y-35, 18, 12);
-            ctx.font = 'bold 14px "Segoe UI"';
-            ctx.fillStyle = '#F1C40F';
-            ctx.fillText('NIKON', x-18, y-18);
-            ctx.fillStyle = '#BDC3C7';
-            ctx.fillRect(x+20, y-30, 12, 8);
-            ctx.restore();
-        }
-
-        function drawTriangles(nowAngle) {
-            for (let i = 0; i < 3; i++) {
-                let triAngle = nowAngle + (i * Math.PI * 2 / 3);
-                let tx = sunCenter.x + triangleRadius * Math.cos(triAngle);
-                let ty = sunCenter.y + triangleRadius * Math.sin(triAngle);
-                if (tx < frameRect.left || tx > frameRect.right || ty < frameRect.top || ty > frameRect.bottom) continue;
-                drawTriangle(tx, ty, colors[i], triAngle + Math.PI/2);
-            }
-        }
-
-        // ---------- 轮回眼绘制函数 ----------
-        function drawTama(x, y, r, rot) {
-            ctx.save();
-            ctx.translate(x, y);
-            ctx.rotate(rot);
-            ctx.beginPath();
-            ctx.moveTo(0, -r);
-            ctx.quadraticCurveTo(r * 0.8, -r * 0.6, r * 0.6, 0);
-            ctx.quadraticCurveTo(r * 0.8, r * 0.6, 0, r);
-            ctx.quadraticCurveTo(-r * 0.8, r * 0.6, -r * 0.6, 0);
-            ctx.quadraticCurveTo(-r * 0.8, -r * 0.6, 0, -r);
-            ctx.fillStyle = 'rgba(180, 100, 200, 0.7)';
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(0, 0, r * 0.25, 0, 2 * Math.PI);
-            ctx.fillStyle = '#F4A460';
-            ctx.fill();
-            ctx.restore();
-        }
-
-        function drawRinnegan() {
-            const centerX = width / 2;
-            const centerY = height / 2;
-            const maxRadius = Math.min(width, height) * 0.4; // 巨大
-
-            ctx.save();
-            ctx.globalAlpha = 0.3;   // 半透明，不影响原有特效
-            // 同心圆波纹
-            for (let i = 0; i < 6; i++) {
-                const r = maxRadius - i * (maxRadius / 8);
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, r, 0, 2 * Math.PI);
-                ctx.strokeStyle = `rgba(200, 160, 220, ${0.4 - i * 0.05})`;
-                ctx.lineWidth = 2.5;
-                ctx.stroke();
-            }
-            // 内圈底色
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, maxRadius * 0.7, 0, 2 * Math.PI);
-            ctx.fillStyle = 'rgba(100, 70, 140, 0.25)';
-            ctx.fill();
-            ctx.strokeStyle = '#b87c4f';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            // 中心圆
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, maxRadius * 0.22, 0, 2 * Math.PI);
-            ctx.fillStyle = 'rgba(210, 150, 80, 0.8)';
-            ctx.fill();
-            // 主勾玉阵列 (6个)
-            const tamaRadius = maxRadius * 0.18;
-            const orbitRadius = maxRadius * 0.55;
-            for (let i = 0; i < 6; i++) {
-                const rad = rinneganAngle + (i * Math.PI * 2 / 6);
-                const x = centerX + orbitRadius * Math.cos(rad);
-                const y = centerY + orbitRadius * Math.sin(rad);
-                drawTama(x, y, tamaRadius, rad + Math.PI/2);
-            }
-            // 外围小勾玉阵列
-            const smallOrbit = maxRadius * 0.85;
-            const smallTama = maxRadius * 0.08;
-            for (let i = 0; i < 12; i++) {
-                const rad = -rinneganAngle * 0.5 + (i * Math.PI * 2 / 12);
-                const x = centerX + smallOrbit * Math.cos(rad);
-                const y = centerY + smallOrbit * Math.sin(rad);
-                ctx.beginPath();
-                ctx.arc(x, y, smallTama, 0, 2 * Math.PI);
-                ctx.fillStyle = 'rgba(180, 130, 200, 0.5)';
-                ctx.fill();
-            }
-            ctx.restore();
-        }
-
-        // 主动画循环（先绘制轮回眼背景，再绘制原有装饰）
-        function animate(timestamp) {
-            if (!startTime) startTime = timestamp;
-            let elapsed = (timestamp - startTime) / 1000;
-            angleTri = (elapsed * Math.PI * 2 / 6) % (Math.PI * 2);
-            swordTime = (elapsed % 5) / 5;
-            let swordMove = Math.sin(swordTime * Math.PI * 2) * 5;
-            rinneganAngle = elapsed * 0.6;  // 轮回眼缓慢旋转
-
-            updateSize();
-            ctx.clearRect(0, 0, width, height);
-
-            // 1. 绘制轮回眼（底层背景）
-            drawRinnegan();
-            // 2. 绘制原有特效（上层）
-            drawGrass();
-            drawSword(swordMove);
-            drawQuarterSun();
-            drawTriangles(angleTri);
-            drawCamera();
-
-            requestAnimationFrame(animate);
-        }
-
-        window.addEventListener('resize', () => updateSize());
-        updateSize();
-        startTime = null;
-        requestAnimationFrame(animate);
-    })();
-</script>
 </body>
 </html>
