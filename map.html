@@ -35,13 +35,16 @@
             background: #2c7da0;
             color: white;
         }
-        /* 大屏入口按钮 - 与筛选栏同一高度、白色背景 */
-        .datav-link {
+        .top-left-panel {
             position: fixed;
             top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+            left: 20px;
             z-index: 1002;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .datav-link {
             background: #ffffff;
             padding: 6px 16px;
             border-radius: 8px;
@@ -49,6 +52,7 @@
             transition: 0.2s;
             white-space: nowrap;
             border: 1px solid #e9ecef;
+            text-align: center;
         }
         .datav-link a {
             color: #2c7da0;
@@ -58,7 +62,55 @@
         }
         .datav-link:hover {
             background: #f5f5f5;
-            transform: translateX(-50%) scale(1.02);
+            transform: scale(1.02);
+        }
+        .user-bar {
+            background: rgba(255,255,255,0.95);
+            padding: 8px 14px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            backdrop-filter: blur(4px);
+            border: 1px solid #e9ecef;
+        }
+        .user-bar a {
+            color: #2c7da0;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .user-bar a:hover { text-decoration: underline; }
+        .user-bar .username { color: #555; }
+        .user-bar .sep { color: #ccc; }
+        .login-hint {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2000;
+            background: rgba(255,255,255,0.96);
+            padding: 40px 50px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        .login-hint p { font-size: 16px; color: #555; margin-bottom: 16px; }
+        .login-hint a {
+            display: inline-block;
+            padding: 10px 28px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+        .login-hint a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(102,126,234,0.4);
         }
         .info-panel {
             position: fixed;
@@ -110,7 +162,8 @@
         @media (max-width: 768px) {
             .info-panel { width: 300px; top: 70px; right: 10px; bottom: 10px; }
             .filter-bar { top: 10px; right: 10px; padding: 6px 10px; }
-            .datav-link { top: 10px; padding: 4px 12px; }
+            .top-left-panel { top: 10px; left: 10px; }
+            .datav-link { padding: 4px 12px; }
             .datav-link a { font-size: 12px; }
         }
     </style>
@@ -122,8 +175,18 @@
     <button class="refresh-btn" onclick="location.reload();">🔄 刷新数据</button>
 </div>
 
-<div class="datav-link">
-    <a href="/datav/" target="_blank">进入3D屏</a>
+<div class="top-left-panel">
+    <div class="user-bar" id="userBar">
+        <span id="userInfo"></span>
+    </div>
+    <div class="datav-link">
+        <a href="/datav/" target="_blank">进入3D屏</a>
+    </div>
+</div>
+
+<div class="login-hint" id="loginHint" style="display:none;">
+    <p>🔐 请先登录后查看地图数据</p>
+    <a href="/login.html">前往登录</a>
 </div>
 
 <div id="map"></div>
@@ -145,12 +208,35 @@
     const map = L.map('map', { layers: [esriImagery], maxZoom: 18, minZoom: 3 }).setView([25.78912, 100.195062], 10);
     L.control.layers(baseMaps, null, { position: 'bottomleft' }).addTo(map);
 
-    let markersLayer = L.layerGroup().addTo(map);
+    const markersLayer = L.layerGroup().addTo(map);
     let allPointsData = [];
+
+    // 检查登录状态并初始化页面
+    async function initPage() {
+        try {
+            const res = await fetch('/api/auth/check', { credentials: 'include' });
+            const data = await res.json();
+            if (data.logged_in) {
+                document.getElementById('userInfo').innerHTML = '✅ 已登录 <span class="sep">|</span> <a href="/admin.html">运维管理</a> <span class="sep">|</span> <a href="/logout">退出</a>';
+                loadPoints();
+            } else {
+                document.getElementById('userInfo').innerHTML = '👋 未登录 <span class="sep">|</span> <a href="/login.html">登录</a>';
+                document.getElementById('loginHint').style.display = 'block';
+            }
+        } catch (err) {
+            document.getElementById('userInfo').innerHTML = '👋 未登录 <span class="sep">|</span> <a href="/login.html">登录</a>';
+            document.getElementById('loginHint').style.display = 'block';
+        }
+    }
 
     async function loadPoints() {
         try {
-            const res = await fetch('/api/points');
+            const res = await fetch('/api/points', { credentials: 'include' });
+            if (res.status === 401) {
+                document.getElementById('loginHint').style.display = 'block';
+                document.getElementById('userInfo').innerHTML = '👋 未登录 <span class="sep">|</span> <a href="/login.html">登录</a>';
+                return;
+            }
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             allPointsData = data.features || [];
@@ -202,10 +288,10 @@
     }
 
     function closePanel() { document.getElementById('infoPanel').style.display = 'none'; }
-    function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
+    function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&','<':'<','>':'>'})[m]); }
 
     document.getElementById('citySelect').addEventListener('change', e => { filterByCity(e.target.value); closePanel(); });
-    loadPoints();
+    initPage();
 </script>
 </body>
 </html>

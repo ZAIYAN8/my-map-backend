@@ -1,6 +1,11 @@
 import os
 import uuid
+import random
+import string
+import io
+import base64
 import psycopg2
+from datetime import datetime, timezone
 from functools import wraps
 from flask import Flask, jsonify, request, send_from_directory, session, redirect, abort
 from flask_cors import CORS
@@ -16,6 +21,7 @@ CORS(app, supports_credentials=True)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 ADMIN_USER = os.environ.get('ADMIN_USER', 'admin')
 ADMIN_PASS = os.environ.get('ADMIN_PASS', 'admin123')
+
 
 # 上传配置
 UPLOAD_FOLDER = 'images'
@@ -34,6 +40,11 @@ DATABASE_URL = os.environ.get('DATABASE_URL')
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL environment variable not set")
 
+# ---------- 内存状态：追踪数据库新记录 ----------
+# 记录上次统计时的最大 id 和对应时间，用于判断是否有新数据
+_last_checked_max_id = None
+_last_checked_time = None
+
 def get_db_connection():
     return psycopg2.connect(DATABASE_URL)
 
@@ -48,39 +59,84 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# ---------- 登录 ----------
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        if username == ADMIN_USER and password == ADMIN_PASS:
-            session['logged_in'] = True
-            return redirect('/admin.html')
-        else:
-            return '<h1>用户名或密码错误</h1><a href="/login">返回登录</a>', 401
-    return '''
-        <!DOCTYPE html>
-        <html>
-        <head><meta charset="UTF-8"><title>管理员登录</title></head>
-        <body style="font-family: Arial; text-align: center; margin-top: 100px;">
-            <h2>运维后台登录</h2>
-            <form method="post">
-                <input type="text" name="username" placeholder="用户名" required><br><br>
-                <input type="password" name="password" placeholder="密码" required><br><br>
-                <button type="submit">登录</button>
-            </form>
-        </body>
-        </html>
-    '''
-
 @app.route('/logout')
 def logout():
     session.pop('logged_in', None)
-    return redirect('/login')
+    return redirect('/login.html')
 
-# ---------- 公开接口 ----------
+# ---------- 验证码生成 ----------
+def generate_captcha_text(length=4):
+    """生成随机验证码文本"""
+    chars = string.ascii_uppercase + string.digits
+    chars = chars.replace('O', '').replace('0', '').replace('I', '').replace('1', '').replace('L', '')
+    return ''.join(random.choices(chars, k=length))
+
+def generate_captcha_svg(text):
+    """使用纯 SVG 生成验证码图片（无需 Pillow）"""
+    width, height = 130, 42
+    chars = list(text)
+    bg_colors = ['#f0f4ff', '#fff0f0', '#f0fff0', '#fffff0', '#f0f0ff', '#fff5f0']
+    bg = random.choice(bg_colors)
+    svg_parts = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}">']
+    svg_parts.append(f'<rect width="{width}" height="{height}" fill="{bg}"/>')
+    for _ in range(5):
+        x1, y1 = random.randint(0, width), random.randint(0, height)
+        x2, y2 = random.randint(0, width), random.randint(0, height)
+        color = f'rgb({random.randint(120,200)},{random.randint(120,200)},{random.randint(120,200)})'
+        svg_parts.append(f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="{color}" stroke-width="1"/>')
+    for _ in range(30):
+        cx, cy = random.randint(0, width), random.randint(0, height)
+        r = random.randint(1, 2)
+        color = f'rgb({random.randint(100,200)},{random.randint(100,200)},{random.randint(100,200)})'
+        svg_parts.append(f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{color}"/>')
+    colors = ['#e74c3c', '#3498db', '#2ecc71', '#9b59b6', '#e67e22', '#1abc9c', '#c0392b', '#2980b9']
+    for i, char in enumerate(chars):
+        x = 18 + i * 26
+        y = random.randint(26, 34)
+        color = random.choice(colors)
+        rotate = random.randint(-20, 20)
+        font_size = random.randint(22, 28)
+        svg_parts.append(
+            f'<text x="{x}" y="{y}" font-size="{font_size}" font-family="Arial,sans-serif" '
+            f'font-weight="bold" fill="{color}" transform="rotate({rotate},{x},{y-8})">{char}</text>'
+        )
+    svg_parts.append('</svg>')
+    return ''.join(svg_parts)
+
+@app.route('/api/captcha')
+def get_captcha():
+    """获取验证码图片"""
+    captcha_text = generate_captcha_text()
+    session['captcha'] = captcha_text.upper()
+    svg_content = generate_captcha_svg(captcha_text)
+    svg_base64 = base64.b64encode(svg_content.encode('utf-8')).decode()
+    return jsonify({'image': f'data:image/svg+xml;base64,{svg_base64}'})
+
+# ---------- 统一认证接口 ----------
+@app.route('/api/auth/check')
+def auth_check():
+    """检查是否已登录"""
+    return jsonify({'logged_in': bool(session.get('logged_in'))})
+
+@app.route('/api/auth/login', methods=['POST'])
+def api_login():
+    """JSON 登录接口（用户名 + 密码 + 验证码）"""
+    data = request.json or {}
+    username = data.get('username', '')
+    password = data.get('password', '')
+    captcha = data.get('captcha', '').upper()
+    expected_captcha = session.get('captcha', '')
+    if not captcha or captcha != expected_captcha:
+        return jsonify({'success': False, 'message': '验证码错误'}), 401
+    session.pop('captcha', None)
+    if username == ADMIN_USER and password == ADMIN_PASS:
+        session['logged_in'] = True
+        return jsonify({'success': True, 'message': '登录成功'})
+    return jsonify({'success': False, 'message': '用户名或密码错误'}), 401
+
+# ---------- 公开接口（不需要登录） ----------
 @app.route('/api/points')
+@admin_required
 def get_points():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -110,6 +166,72 @@ def get_points():
     cur.close()
     conn.close()
     return jsonify(geojson)
+
+# ---------- 省份统计接口（需要登录） ----------
+@app.route('/api/points/stats')
+@admin_required
+def get_points_stats():
+    """按省份统计点数"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT 
+            COALESCE(province, '未知') as province,
+            COUNT(*) as count
+        FROM points 
+        GROUP BY province 
+        ORDER BY count DESC
+    """)
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    
+    total = sum(row[1] for row in rows)
+    stats = [{'province': row[0], 'count': row[1]} for row in rows]
+    
+    return jsonify({
+        'total': total,
+        'stats': stats
+    })
+
+# ---------- 距离上次新增记录接口（需要登录） ----------
+@app.route('/api/last-upload')
+@admin_required
+def get_last_upload():
+    """
+    通过数据库最大 id 判断是否有人新增了数据点。
+    如果有新记录（max_id 增大），重置天数从0开始；
+    如果没变化，累计上次新增至今的天数。
+    """
+    global _last_checked_max_id, _last_checked_time
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT COALESCE(MAX(id), 0) FROM points")
+    current_max = cur.fetchone()[0]
+    cur.close()
+    conn.close()
+    
+    now = datetime.now(timezone.utc)
+    
+    # 首次运行 / 初始化
+    if _last_checked_max_id is None:
+        _last_checked_max_id = current_max
+        _last_checked_time = now
+    
+    # 如果最大 id 变大了，说明有新数据加入
+    if current_max > _last_checked_max_id:
+        _last_checked_max_id = current_max
+        _last_checked_time = now
+    
+    days = (now - _last_checked_time).days
+    
+    return jsonify({
+        'current_max_id': current_max,
+        'days_since': days,
+        'last_update_time': _last_checked_time.isoformat(),
+        'has_upload': _last_checked_max_id > 0
+    })
 
 # ---------- 管理后台 API ----------
 @app.route('/api/admin/points', methods=['GET'])
@@ -213,7 +335,11 @@ def upload_image():
 # ---------- 静态页面服务 ----------
 @app.route('/')
 def index():
-    return send_from_directory('.', 'portal.html') if os.path.exists('portal.html') else redirect('/map.html')
+    return send_from_directory('.', 'map.html')
+
+@app.route('/login.html')
+def login_page():
+    return send_from_directory('.', 'login.html')
 
 @app.route('/map.html')
 def map_page():
@@ -221,8 +347,6 @@ def map_page():
 
 @app.route('/admin.html')
 def admin_page():
-    if not session.get('logged_in'):
-        return redirect('/login')
     return send_from_directory('.', 'admin.html')
 
 @app.route('/datav/')
@@ -231,11 +355,12 @@ def datav_index():
 
 @app.route('/datav/<path:filename>')
 def datav_static(filename):
+    # JS/CSS/图片等静态资源不拦截，页面路由都返回 index.html（SPA）
     return send_from_directory('datav', filename)
 
 @app.route('/<path:filename>')
 def serve_static(filename):
-    if filename == 'admin.html':
+    if filename in ('admin.html', 'login.html'):
         abort(403)
     if filename.endswith('.html') or filename.endswith('.js') or filename.endswith('.css'):
         return send_from_directory('.', filename)
