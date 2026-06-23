@@ -170,9 +170,9 @@
 </head>
 <body>
 <div class="filter-bar">
-    <span>📍 选择城市：</span>
+    <span>选择城市：</span>
     <select id="citySelect"><option value="all">全部</option></select>
-    <button class="refresh-btn" onclick="location.reload();">🔄 刷新数据</button>
+    <button class="refresh-btn" onclick="location.reload();">刷新数据</button>
 </div>
 
 <div class="top-left-panel">
@@ -185,14 +185,14 @@
 </div>
 
 <div class="login-hint" id="loginHint" style="display:none;">
-    <p>🔐 请先登录后查看地图数据</p>
+    <p>请先登录后查看地图数据</p>
     <a href="/login.html">前往登录</a>
 </div>
 
 <div id="map"></div>
 <div id="infoPanel" class="info-panel">
     <span class="close-panel" onclick="closePanel()">×</span>
-    <div id="panelContent"><div class="empty-panel">✨ 点击地图上的标记<br>显示详细信息</div></div>
+    <div id="panelContent"><div class="empty-panel">点击地图上的标记<br>显示详细信息</div></div>
 </div>
 
 <script>
@@ -217,14 +217,14 @@
             const res = await fetch('/api/auth/check', { credentials: 'include' });
             const data = await res.json();
             if (data.logged_in) {
-                document.getElementById('userInfo').innerHTML = '✅ 已登录 <span class="sep">|</span> <a href="/admin.html">运维管理</a> <span class="sep">|</span> <a href="/logout">退出</a>';
+                document.getElementById('userInfo').innerHTML = '已登录 <span class="sep">|</span> <a href="/admin.html">运维管理</a> <span class="sep">|</span> <a href="/logout">退出</a>';
                 loadPoints();
             } else {
-                document.getElementById('userInfo').innerHTML = '👋 未登录 <span class="sep">|</span> <a href="/login.html">登录</a>';
+                document.getElementById('userInfo').innerHTML = '未登录 <span class="sep">|</span> <a href="/login.html">登录</a>';
                 document.getElementById('loginHint').style.display = 'block';
             }
         } catch (err) {
-            document.getElementById('userInfo').innerHTML = '👋 未登录 <span class="sep">|</span> <a href="/login.html">登录</a>';
+            document.getElementById('userInfo').innerHTML = '未登录 <span class="sep">|</span> <a href="/login.html">登录</a>';
             document.getElementById('loginHint').style.display = 'block';
         }
     }
@@ -234,7 +234,7 @@
             const res = await fetch('/api/points', { credentials: 'include' });
             if (res.status === 401) {
                 document.getElementById('loginHint').style.display = 'block';
-                document.getElementById('userInfo').innerHTML = '👋 未登录 <span class="sep">|</span> <a href="/login.html">登录</a>';
+                document.getElementById('userInfo').innerHTML = '未登录 <span class="sep">|</span> <a href="/login.html">登录</a>';
                 return;
             }
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -255,7 +255,7 @@
             filterByCity('all');
         } catch (err) {
             console.error('加载点位失败:', err);
-            document.getElementById('panelContent').innerHTML = '<div class="empty-panel">❌ 加载点位数据失败，请检查后端服务</div>';
+            document.getElementById('panelContent').innerHTML = '<div class="empty-panel">加载点位数据失败，请检查后端服务</div>';
         }
     }
 
@@ -282,7 +282,7 @@
             <h3>${escapeHtml(props.name) || '未命名'}</h3>
             ${imgUrl ? `<img src="${imgUrl}" alt="图片" onerror="this.onerror=null;this.src='';this.alt='图片加载失败'">` : ''}
             <p>${escapeHtml(props.description) || '暂无描述'}</p>
-            <div class="location">📍 ${escapeHtml(props.city) || ''}${props.city && props.province ? '，' : ''}${escapeHtml(props.province) || ''}</div>
+            <div class="location">${escapeHtml(props.city) || ''}${props.city && props.province ? '，' : ''}${escapeHtml(props.province) || ''}</div>
         `;
         panel.style.display = 'block';
     }
