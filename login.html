@@ -3,176 +3,316 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>小焉的摄影平台 - 登录</title>
+    <title>GIS 运维管理 — 登录</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        /* ========== Design Tokens ========== */
+        :root {
+            --primary: #2563EB;
+            --primary-hover: #1D4ED8;
+            --primary-light: #EFF6FF;
+            --bg: #F1F5F9;
+            --surface: #FFFFFF;
+            --text: #0F172A;
+            --text-secondary: #64748B;
+            --text-muted: #94A3B8;
+            --border: #E2E8F0;
+            --danger: #DC2626;
+            --danger-light: #FEF2F2;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.12), 0 4px 10px rgba(0,0,0,0.08);
+            --shadow-xl: 0 20px 50px rgba(0,0,0,0.15);
+            --radius: 8px;
+            --radius-sm: 6px;
+            --radius-lg: 12px;
+            --transition: 150ms ease;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
-            font-family: 'Segoe UI', 'PingFang SC', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
         }
+
+        /* ========== Decorative Background ========== */
+        .bg-decoration {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 0;
+        }
+        .bg-circle {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.06;
+        }
+        .bg-circle-1 {
+            width: 600px; height: 600px;
+            background: var(--primary);
+            top: -200px; right: -150px;
+        }
+        .bg-circle-2 {
+            width: 400px; height: 400px;
+            background: #7C3AED;
+            bottom: -100px; left: -100px;
+        }
+        .bg-circle-3 {
+            width: 200px; height: 200px;
+            background: #059669;
+            top: 50%; left: 60%;
+        }
+
+        /* ========== Login Card ========== */
+        .login-wrapper {
+            position: relative;
+            z-index: 1;
+            width: 420px;
+            max-width: 92vw;
+        }
+
         .login-card {
-            background: white;
-            border-radius: 20px;
-            padding: 48px 40px;
-            width: 400px;
-            max-width: 90%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-            text-align: center;
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            padding: 44px 40px;
+            box-shadow: var(--shadow-xl);
+            border: 1px solid var(--border);
         }
-        .login-card .logo {
-            font-size: 48px;
-            margin-bottom: 12px;
-        }
-        .login-card h1 {
-            font-size: 1.6rem;
-            font-weight: 700;
-            color: #1a2a3a;
+
+        /* ========== Brand ========== */
+        .brand {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
             margin-bottom: 8px;
         }
-        .login-card .subtitle {
-            font-size: 0.9rem;
-            color: #8899aa;
+        .brand-icon {
+            width: 44px; height: 44px;
+            background: var(--primary);
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            flex-shrink: 0;
+        }
+        .brand h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.5px;
+        }
+        .subtitle {
+            text-align: center;
+            font-size: 14px;
+            color: var(--text-secondary);
             margin-bottom: 32px;
         }
+
+        /* ========== Form ========== */
         .form-group {
-            margin-bottom: 20px;
-            text-align: left;
+            margin-bottom: 18px;
         }
-        .form-group label {
+        .form-label {
             display: block;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
-            color: #334455;
+            color: var(--text);
             margin-bottom: 6px;
         }
-        .form-group input {
+        .form-input {
             width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #e8edf2;
-            border-radius: 10px;
+            padding: 10px 14px;
             font-size: 15px;
+            font-family: inherit;
+            color: var(--text);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            transition: all var(--transition);
             outline: none;
-            transition: border-color 0.2s;
         }
-        .form-group input:focus {
-            border-color: #667eea;
+        .form-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* ========== Captcha ========== */
         .captcha-row {
             display: flex;
             gap: 12px;
-            align-items: center;
+            align-items: stretch;
         }
-        .captcha-row input {
+        .captcha-row .form-input {
             flex: 1;
         }
         .captcha-img {
-            width: 120px;
-            height: 40px;
-            border-radius: 8px;
+            width: 130px;
+            height: 44px;
+            border-radius: var(--radius-sm);
             cursor: pointer;
-            border: 2px solid #e8edf2;
-            transition: border-color 0.2s;
+            border: 1px solid var(--border);
+            transition: all var(--transition);
+            flex-shrink: 0;
+            object-fit: cover;
         }
         .captcha-img:hover {
-            border-color: #667eea;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
         }
         .captcha-hint {
             font-size: 12px;
-            color: #8899aa;
+            color: var(--text-muted);
             margin-top: 4px;
         }
-        .login-btn {
+
+        /* ========== Button ========== */
+        .btn-primary {
             width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 12px;
+            background: var(--primary);
             color: white;
             border: none;
-            border-radius: 10px;
-            font-size: 16px;
+            border-radius: var(--radius-sm);
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all var(--transition);
             margin-top: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
-        .login-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102,126,234,0.4);
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
         }
-        .login-btn:active {
-            transform: translateY(0);
+        .btn-primary:active {
+            transform: scale(0.98);
         }
-        .login-btn:disabled {
+        .btn-primary:disabled {
             opacity: 0.6;
             cursor: not-allowed;
-            transform: none;
             box-shadow: none;
         }
+
+        /* ========== Error ========== */
         .error-msg {
-            background: #fff3f3;
-            color: #e74c3c;
-            padding: 10px 16px;
-            border-radius: 8px;
-            font-size: 14px;
+            background: var(--danger-light);
+            color: var(--danger);
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 500;
             margin-bottom: 16px;
             display: none;
-            border-left: 4px solid #e74c3c;
-            text-align: left;
+            border-left: 3px solid var(--danger);
+        }
+
+        /* ========== Footer ========== */
+        .login-footer {
+            text-align: center;
+            margin-top: 20px;
         }
         .back-link {
-            display: inline-block;
-            margin-top: 20px;
-            color: #8899aa;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-secondary);
             text-decoration: none;
-            font-size: 14px;
-            transition: color 0.2s;
+            font-size: 13px;
+            font-weight: 500;
+            transition: color var(--transition);
         }
         .back-link:hover {
-            color: #667eea;
+            color: var(--primary);
         }
     </style>
 </head>
 <body>
-<div class="login-card">
-    <div class="logo"></div>
-    <h1>小焉的摄影平台</h1>
-    <p class="subtitle">请输入账号、密码和验证码</p>
-    
-    <div id="errorMsg" class="error-msg"></div>
-    
-    <form id="loginForm">
-        <div class="form-group">
-            <label for="username">用户名</label>
-            <input type="text" id="username" placeholder="请输入用户名" required autocomplete="off">
-        </div>
-        
-        <div class="form-group">
-            <label for="password">密码</label>
-            <input type="password" id="password" placeholder="请输入密码" required autocomplete="off">
-        </div>
-        
-        <div class="form-group">
-            <label for="captcha">验证码</label>
-            <div class="captcha-row">
-                <input type="text" id="captcha" placeholder="输入验证码" required maxlength="4" autocomplete="off">
-                <img id="captchaImg" class="captcha-img" alt="验证码" title="点击刷新验证码">
+
+<!-- Decorative background circles -->
+<div class="bg-decoration">
+    <div class="bg-circle bg-circle-1"></div>
+    <div class="bg-circle bg-circle-2"></div>
+    <div class="bg-circle bg-circle-3"></div>
+</div>
+
+<div class="login-wrapper">
+    <div class="login-card">
+        <!-- Brand -->
+        <div class="brand">
+            <div class="brand-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M2 12h20"/>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                </svg>
             </div>
-            <p class="captcha-hint">点击图片可刷新验证码</p>
+            <h1>GIS 运维管理</h1>
         </div>
-        
-        <button type="submit" class="login-btn" id="loginBtn">进入平台</button>
-    </form>
-    
-    <a href="./map.html" class="back-link">← 返回地图展示端</a>
+        <p class="subtitle">地图点位数据管理平台</p>
+
+        <!-- Error -->
+        <div id="errorMsg" class="error-msg"></div>
+
+        <!-- Form -->
+        <form id="loginForm">
+            <div class="form-group">
+                <label class="form-label" for="username">用户名</label>
+                <input type="text" id="username" class="form-input" placeholder="请输入用户名" required autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">密码</label>
+                <input type="password" id="password" class="form-input" placeholder="请输入密码" required autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="captcha">验证码</label>
+                <div class="captcha-row">
+                    <input type="text" id="captcha" class="form-input" placeholder="输入验证码" required maxlength="4" autocomplete="off">
+                    <img id="captchaImg" class="captcha-img" alt="验证码" title="点击刷新验证码">
+                </div>
+                <p class="captcha-hint">点击图片可刷新验证码</p>
+            </div>
+
+            <button type="submit" class="btn-primary" id="loginBtn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                    <polyline points="10 17 15 12 10 7"/>
+                    <line x1="15" y1="12" x2="3" y2="12"/>
+                </svg>
+                进入平台
+            </button>
+        </form>
+    </div>
+
+    <div class="login-footer">
+        <a href="./map.html" class="back-link">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"/>
+                <polyline points="12 19 5 12 12 5"/>
+            </svg>
+            返回地图展示端
+        </a>
+    </div>
 </div>
 
 <script>
     const API_BASE = '';
-    
-    // 加载验证码
+
     async function loadCaptcha() {
         try {
             const res = await fetch(`${API_BASE}/api/captcha`);
@@ -183,47 +323,35 @@
             console.error('加载验证码失败:', err);
         }
     }
-    
-    // 点击验证码图片刷新
+
     document.getElementById('captchaImg').addEventListener('click', loadCaptcha);
-    
-    // 显示错误信息
+
     function showError(msg) {
         const el = document.getElementById('errorMsg');
         el.textContent = msg;
         el.style.display = 'block';
     }
-    
+
     function hideError() {
         document.getElementById('errorMsg').style.display = 'none';
     }
-    
-    // 表单提交
+
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         hideError();
-        
+
         const username = document.getElementById('username').value.trim();
         const password = document.getElementById('password').value.trim();
         const captcha = document.getElementById('captcha').value.trim();
-        
-        if (!username) {
-            showError('请输入用户名');
-            return;
-        }
-        if (!password) {
-            showError('请输入密码');
-            return;
-        }
-        if (!captcha) {
-            showError('请输入验证码');
-            return;
-        }
-        
+
+        if (!username) { showError('请输入用户名'); return; }
+        if (!password) { showError('请输入密码'); return; }
+        if (!captcha) { showError('请输入验证码'); return; }
+
         const btn = document.getElementById('loginBtn');
         btn.disabled = true;
-        btn.textContent = '验证中...';
-        
+        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 验证中...`;
+
         try {
             const res = await fetch(`${API_BASE}/api/auth/login`, {
                 method: 'POST',
@@ -231,26 +359,24 @@
                 body: JSON.stringify({ username, password, captcha }),
                 credentials: 'include'
             });
-            
+
             const data = await res.json();
-            
+
             if (data.success) {
-                // 登录成功，跳转到 portal
                 window.location.href = './map.html';
             } else {
                 showError(data.message || '登录失败');
-                loadCaptcha(); // 刷新验证码
+                loadCaptcha();
             }
         } catch (err) {
             showError('网络错误，请重试');
             loadCaptcha();
         } finally {
             btn.disabled = false;
-            btn.textContent = '进入平台';
+            btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> 进入平台`;
         }
     });
-    
-    // 页面加载时获取验证码
+
     loadCaptcha();
 </script>
 </body>

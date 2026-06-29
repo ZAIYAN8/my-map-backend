@@ -4,14 +4,20 @@ import random
 import string
 import io
 import base64
+import traceback
+import logging
 import psycopg2
 from datetime import datetime, timezone
 from functools import wraps
 from flask import Flask, jsonify, request, send_from_directory, session, redirect, abort
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
-from qiniu import Auth, put_file
+from qcloud_cos import CosConfig, CosS3Client
 from dotenv import load_dotenv
+
+# 配置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -29,11 +35,21 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# 七牛云配置
-QINIU_ACCESS_KEY = os.environ.get('QINIU_ACCESS_KEY')
-QINIU_SECRET_KEY = os.environ.get('QINIU_SECRET_KEY')
-QINIU_BUCKET_NAME = os.environ.get('QINIU_BUCKET_NAME')
-QINIU_BASE_URL = os.environ.get('QINIU_BASE_URL')
+# 腾讯云 COS 配置
+COS_SECRET_ID = os.environ.get('COS_SECRET_ID')
+COS_SECRET_KEY = os.environ.get('COS_SECRET_KEY')
+COS_BUCKET_NAME = os.environ.get('COS_BUCKET_NAME')
+COS_REGION = os.environ.get('COS_REGION')
+COS_BASE_URL = f'https://{COS_BUCKET_NAME}.cos.{COS_REGION}.myqcloud.com/'
+
+# 初始化 COS 客户端
+_cos_client = None
+def get_cos_client():
+    global _cos_client
+    if _cos_client is None:
+        config = CosConfig(Region=COS_REGION, SecretId=COS_SECRET_ID, SecretKey=COS_SECRET_KEY)
+        _cos_client = CosS3Client(config)
+    return _cos_client
 
 # 数据库配置
 DATABASE_URL = os.environ.get('DATABASE_URL')
@@ -302,6 +318,44 @@ def delete_point(point_id):
     conn.close()
     return jsonify({'message': '删除成功'})
 
+@app.route('/api/admin/points/<int:point_id>/clear-image', methods=['POST'])
+@admin_required
+def clear_point_image(point_id):
+    """清除某个点位的图片 URL，用于清理已失效的旧存储链接"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("UPDATE points SET image_url = '' WHERE id = %s", (point_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'message': '图片已清除'})
+
+# ---------- COS 连接诊断 ----------
+@app.route('/api/cos-diagnose')
+@admin_required
+def cos_diagnose():
+    """诊断 COS 连接状态，帮助排查上传失败原因"""
+    result = {
+        'configured': all([COS_SECRET_ID, COS_SECRET_KEY, COS_BUCKET_NAME, COS_REGION]),
+        'bucket': COS_BUCKET_NAME,
+        'region': COS_REGION,
+        'base_url': COS_BASE_URL if COS_BUCKET_NAME else None,
+        'secret_id_set': bool(COS_SECRET_ID),
+        'secret_key_set': bool(COS_SECRET_KEY),
+    }
+    if result['configured']:
+        try:
+            cos_client = get_cos_client()
+            # 尝试列出 bucket 中的文件（仅取1个）来验证连通性
+            response = cos_client.list_objects(Bucket=COS_BUCKET_NAME, MaxKeys=1)
+            result['connection'] = 'ok'
+            result['object_count'] = response.get('Contents', []) and 'has_objects' or 'empty'
+        except Exception as e:
+            result['connection'] = 'failed'
+            result['error_type'] = type(e).__name__
+            result['error_detail'] = str(e)[:500]
+    return jsonify(result)
+
 # ---------- 图片上传 ----------
 @app.route('/api/upload', methods=['POST'])
 @admin_required
@@ -319,18 +373,35 @@ def upload_image():
     temp_path = os.path.join(app.config['UPLOAD_FOLDER'], new_filename)
     file.save(temp_path)
 
-    try:
-        q = Auth(QINIU_ACCESS_KEY, QINIU_SECRET_KEY)
-        token = q.upload_token(QINIU_BUCKET_NAME)
-        ret, info = put_file(token, f'images/{new_filename}', temp_path)
-        if ret is not None:
-            image_url = QINIU_BASE_URL + f'images/{new_filename}'
+    # 先检查 COS 配置是否完整
+    cos_configured = all([COS_SECRET_ID, COS_SECRET_KEY, COS_BUCKET_NAME, COS_REGION])
+
+    if cos_configured:
+        try:
+            cos_client = get_cos_client()
+            cos_key = f'images/{new_filename}'
+            cos_client.upload_file(
+                Bucket=COS_BUCKET_NAME,
+                Key=cos_key,
+                LocalFilePath=temp_path
+            )
+            image_url = COS_BASE_URL + cos_key
+            logger.info(f'COS 上传成功: {cos_key}')
+            # COS 上传成功，删除本地临时文件
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
             return jsonify({'image_url': image_url}), 200
-        else:
-            return jsonify({'error': f'上传到七牛云失败: {info}'}), 500
-    finally:
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
+        except Exception as e:
+            # 打印完整异常信息便于排查
+            logger.error(f'COS 上传失败: {traceback.format_exc()}')
+            # COS 失败时降级到本地存储，不要丢失用户数据
+            logger.warning(f'COS 上传失败，降级为本地存储: {str(e)}')
+            # 保留本地文件作为兜底
+
+    # 本地存储兜底方案（COS 未配置或上传失败时）
+    local_url = f'/local-images/{new_filename}'
+    logger.info(f'使用本地存储: {new_filename}')
+    return jsonify({'image_url': local_url}), 200
 
 # ---------- 静态页面服务 ----------
 @app.route('/')
@@ -347,7 +418,8 @@ def map_page():
 
 @app.route('/admin.html')
 def admin_page():
-    return send_from_directory('.', 'admin.html')
+    # 运维管理已合并到 3D 可视化页面
+    return redirect('/datav/')
 
 @app.route('/datav/')
 def datav_index():
@@ -358,9 +430,14 @@ def datav_static(filename):
     # JS/CSS/图片等静态资源不拦截，页面路由都返回 index.html（SPA）
     return send_from_directory('datav', filename)
 
+@app.route('/local-images/<path:filename>')
+def serve_local_image(filename):
+    """本地存储的图片兜底服务"""
+    return send_from_directory(UPLOAD_FOLDER, filename)
+
 @app.route('/<path:filename>')
 def serve_static(filename):
-    if filename in ('admin.html', 'login.html'):
+    if filename in ('login.html',):
         abort(403)
     if filename.endswith('.html') or filename.endswith('.js') or filename.endswith('.css'):
         return send_from_directory('.', filename)
