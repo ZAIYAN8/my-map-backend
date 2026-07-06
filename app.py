@@ -422,7 +422,9 @@ def get_points():
                         'image_url', image_url,
                         'description', description,
                         'province', province,
-                        'city', city
+                        'city', city,
+                        'created_at', created_at,
+                        'marker_icon', COALESCE(marker_icon, '📍')
                     )
                 )
                 ORDER BY id
@@ -495,7 +497,8 @@ def admin_get_points():
     cur.execute(f"""
         SELECT p.id, p.name, p.latitude, p.longitude, p.image_url,
                p.description, p.province, p.city, p.user_id,
-               COALESCE(u.username, '—') as owner_name
+               COALESCE(u.username, '—') as owner_name,
+               p.created_at, COALESCE(p.marker_icon, '📍') as marker_icon
         FROM points p
         LEFT JOIN users u ON p.user_id = u.id
         {filter_sql.replace('WHERE p.', 'WHERE ')}
@@ -511,7 +514,9 @@ def admin_get_points():
             'latitude': float(row[2]), 'longitude': float(row[3]),
             'image_url': row[4], 'description': row[5] or '',
             'province': row[6] or '', 'city': row[7] or '',
-            'user_id': row[8], 'owner_name': row[9]
+            'user_id': row[8], 'owner_name': row[9],
+            'created_at': row[10].isoformat() if row[10] else None,
+            'marker_icon': row[11]
         })
     return jsonify(points)
 
@@ -523,11 +528,12 @@ def add_point():
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
-        INSERT INTO points (name, latitude, longitude, image_url, description, province, city, user_id)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO points (name, latitude, longitude, image_url, description, province, city, user_id, marker_icon)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id
     """, (data['name'], data['latitude'], data['longitude'], data.get('image_url', ''),
-          data.get('description', ''), data.get('province', ''), data.get('city', ''), user_id))
+          data.get('description', ''), data.get('province', ''), data.get('city', ''), user_id,
+          data.get('marker_icon', '📍')))
     new_id = cur.fetchone()[0]
     conn.commit()
     cur.close()
@@ -550,9 +556,10 @@ def update_point(point_id):
             return jsonify({'error': '无权操作此点位'}), 403
     cur.execute("""
         UPDATE points SET name=%s, latitude=%s, longitude=%s, image_url=%s,
-        description=%s, province=%s, city=%s WHERE id=%s
+        description=%s, province=%s, city=%s, marker_icon=%s WHERE id=%s
     """, (data['name'], data['latitude'], data['longitude'], data.get('image_url', ''),
-          data.get('description', ''), data.get('province', ''), data.get('city', ''), point_id))
+          data.get('description', ''), data.get('province', ''), data.get('city', ''),
+          data.get('marker_icon', '📍'), point_id))
     conn.commit()
     cur.close()
     conn.close()

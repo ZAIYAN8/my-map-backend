@@ -553,6 +553,7 @@
     L.control.layers(baseMaps, null, { position: 'bottomright' }).addTo(map);
 
     const markersLayer = L.layerGroup().addTo(map);
+    const timelineLayer = L.layerGroup().addTo(map);
     let allPointsData = [];
 
     // ===== Panel Control =====
@@ -635,13 +636,14 @@
 
     function filterByCity(selected) {
         markersLayer.clearLayers();
+        timelineLayer.clearLayers();
         const filtered = (selected === 'all') ? allPointsData : allPointsData.filter(f => f.properties.city === selected);
         // Update point list panel
         renderPointList(filtered, selected);
         // Update map markers
         if (filtered.length === 0) return;
         const bounds = [];
-        filtered.forEach((f, idx) => {
+        filtered.forEach((f) => {
             const coords = f.geometry.coordinates;
             const latlng = [coords[1], coords[0]];
             bounds.push(latlng);
@@ -652,6 +654,20 @@
             });
         });
         map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50] });
+
+        // 按时序画红线连接
+        const timed = filtered
+            .filter(f => f.properties.created_at)
+            .sort((a, b) => new Date(a.properties.created_at).getTime() - new Date(b.properties.created_at).getTime());
+        if (timed.length >= 2) {
+            const latlngs = timed.map(f => [f.geometry.coordinates[1], f.geometry.coordinates[0]]);
+            L.polyline(latlngs, {
+                color: '#DC2626',
+                weight: 2.5,
+                opacity: 0.5,
+                dashArray: '8 6',
+            }).addTo(timelineLayer);
+        }
     }
 
     function renderPointList(filtered, selected) {
@@ -666,12 +682,14 @@
 
         body.innerHTML = filtered.map((f, idx) => {
             const p = f.properties;
+            const icon = p.marker_icon || '📍';
             const loc = [p.city, p.province].filter(Boolean).join(' · ') || '位置未知';
+            const timeStr = p.created_at ? new Date(p.created_at).toLocaleDateString('zh-CN') : '';
             return `<div class="point-list-item" data-id="${p.id}" data-lat="${f.geometry.coordinates[1]}" data-lng="${f.geometry.coordinates[0]}" onclick="clickPointItem(this, ${f.geometry.coordinates[1]}, ${f.geometry.coordinates[0]})">
-                <div class="point-list-num">${idx + 1}</div>
+                <div class="point-list-num" style="background:transparent;box-shadow:none;font-size:22px;">${icon}</div>
                 <div class="point-list-info">
                     <div class="point-list-name">${escHtml(p.name) || '未命名'}</div>
-                    <div class="point-list-loc">${escHtml(loc)}</div>
+                    <div class="point-list-loc">${escHtml(loc)}${timeStr ? ' · ' + timeStr : ''}</div>
                 </div>
             </div>`;
         }).join('');
@@ -717,7 +735,8 @@
                </div>`
             : '';
 
-        document.getElementById('panelTitle').textContent = props.name || '未命名';
+        const timeStr = props.created_at ? new Date(props.created_at).toLocaleString('zh-CN') : '';
+        document.getElementById('panelTitle').textContent = (props.marker_icon || '📍') + ' ' + (props.name || '未命名');
         document.getElementById('panelContent').innerHTML = `
             <div class="panel-section">
                 <div class="panel-label">描述</div>
@@ -729,6 +748,7 @@
                 <span class="location-dot"></span>
                 ${props.city && props.province ? `${escHtml(props.province)} · ${escHtml(props.city)}` : escHtml(props.city || props.province || '位置未知')}
             </div>
+            ${timeStr ? `<div style="margin-top:10px;font-size:12px;color:var(--text-muted);">🕐 ${timeStr}</div>` : ''}
         `;
         openPanel();
     }
