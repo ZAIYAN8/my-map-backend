@@ -670,6 +670,10 @@ def login_page():
 def map_page():
     return send_from_directory('.', 'map.html')
 
+@app.route('/profile.html')
+def profile_page():
+    return send_from_directory('.', 'profile.html')
+
 @app.route('/admin.html')
 def admin_page():
     return redirect('/datav/')

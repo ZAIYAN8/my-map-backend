@@ -582,7 +582,8 @@
             const data = await res.json();
             if (data.logged_in) {
                 document.getElementById('userInfo').innerHTML = `
-                    已登录 <span style="color:var(--border);margin:0 4px;">|</span>
+                    <a href="/profile.html" class="btn-link">个人账号</a>
+                    <span style="color:var(--border);margin:0 4px;">|</span>
                     <a href="/logout" class="btn-link">退出</a>`;
                 loadPoints();
             } else {

@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人账号 — GIS 运维管理</title>
+    <style>
+        :root {
+            --primary: #2563EB;
+            --primary-hover: #1D4ED8;
+            --primary-light: #EFF6FF;
+            --bg: #F1F5F9;
+            --surface: #FFFFFF;
+            --text: #0F172A;
+            --text-secondary: #64748B;
+            --text-muted: #94A3B8;
+            --border: #E2E8F0;
+            --danger: #DC2626;
+            --danger-light: #FEF2F2;
+            --success: #059669;
+            --success-light: #ECFDF5;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 25px rgba(0,0,0,0.12), 0 4px 10px rgba(0,0,0,0.08);
+            --radius: 8px;
+            --radius-sm: 6px;
+            --radius-lg: 12px;
+            --transition: 150ms ease;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ========== Top Nav ========== */
+        .navbar {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-sm);
+        }
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--text);
+            text-decoration: none;
+        }
+        .navbar-brand .logo {
+            width: 32px; height: 32px;
+            background: var(--primary);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        .navbar-links {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color var(--transition);
+        }
+        .nav-link:hover { color: var(--primary); }
+
+        /* ========== Layout ========== */
+        .container {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 32px 20px;
+        }
+
+        /* ========== Card ========== */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        .card-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .avatar {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 700;
+        }
+        .card-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text);
+        }
+        .card-subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        .card-body {
+            padding: 24px;
+        }
+
+        /* ========== Info Row ========== */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .info-item {
+            padding: 12px 16px;
+            background: #F8FAFC;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+        }
+        .info-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        .info-value {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .role-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 100px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .role-admin {
+            background: #DBEAFE;
+            color: #1E40AF;
+        }
+        .role-user {
+            background: #E2E8F0;
+            color: #475569;
+        }
+
+        /* ========== Form ========== */
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 16px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border);
+        }
+        .form-group {
+            margin-bottom: 14px;
+        }
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 5px;
+        }
+        .form-input {
+            width: 100%;
+            padding: 9px 12px;
+            font-size: 14px;
+            font-family: inherit;
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            outline: none;
+            transition: all var(--transition);
+        }
+        .form-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        .form-input:disabled {
+            background: #F8FAFC;
+            color: var(--text-muted);
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: var(--radius-sm);
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-outline {
+            background: var(--surface);
+            color: var(--text);
+            border-color: var(--border);
+        }
+        .btn-outline:hover { background: var(--bg); }
+        .btn-danger {
+            background: var(--danger);
+            color: #fff;
+        }
+        .btn-danger:hover { background: #B91C1C; }
+
+        /* ========== Messages ========== */
+        .msg {
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            display: none;
+        }
+        .msg-success {
+            background: var(--success-light);
+            color: #065F46;
+            border: 1px solid #A7F3D0;
+        }
+        .msg-error {
+            background: var(--danger-light);
+            color: #991B1B;
+            border: 1px solid #FECACA;
+        }
+
+        /* ========== Phone Form ========== */
+        .phone-row {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+        }
+        .phone-row .form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        @media (max-width: 480px) {
+            .info-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar">
+    <a href="/map.html" class="navbar-brand">
+        <div class="logo">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </div>
+        GIS 运维管理
+    </a>
+    <div class="navbar-links">
+        <a href="/map.html" class="nav-link">地图浏览</a>
+        <a href="/datav/" class="nav-link">运维管理</a>
+        <a href="/logout" class="nav-link" style="color:var(--danger);">退出登录</a>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+            <div class="avatar" id="avatarLetter">?</div>
+            <div>
+                <div class="card-title" id="displayName">加载中...</div>
+                <div class="card-subtitle" id="displayRole"></div>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <!-- Message -->
+            <div id="msgBox" class="msg"></div>
+
+            <!-- Info Grid -->
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">用户名</div>
+                    <div class="info-value" id="infoUsername">—</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">角色</div>
+                    <div class="info-value" id="infoRole">—</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">手机号</div>
+                    <div class="info-value" id="infoPhone">—</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">注册时间</div>
+                    <div class="info-value" id="infoCreated">—</div>
+                </div>
+            </div>
+
+            <!-- Phone Update -->
+            <div class="section-title">修改手机号</div>
+            <div class="phone-row" style="margin-bottom:24px;">
+                <div class="form-group">
+                    <label class="form-label" for="phoneInput">手机号</label>
+                    <input type="text" id="phoneInput" class="form-input" placeholder="输入新手机号">
+                </div>
+                <button class="btn btn-outline" id="savePhoneBtn" onclick="savePhone()">保存</button>
+            </div>
+
+            <!-- Password Change -->
+            <div class="section-title">修改密码</div>
+            <form id="pwdForm">
+                <div class="form-group">
+                    <label class="form-label" for="oldPwd">原密码</label>
+                    <input type="password" id="oldPwd" class="form-input" placeholder="输入原密码" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="newPwd">新密码</label>
+                    <input type="password" id="newPwd" class="form-input" placeholder="新密码（至少4位）" required minlength="4">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="confirmPwd">确认新密码</label>
+                    <input type="password" id="confirmPwd" class="form-input" placeholder="再次输入新密码" required minlength="4">
+                </div>
+                <button type="submit" class="btn btn-primary" id="pwdBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    修改密码
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = '';
+
+    function showMsg(text, type) {
+        const el = document.getElementById('msgBox');
+        el.textContent = text;
+        el.className = `msg msg-${type}`;
+        el.style.display = 'block';
+        setTimeout(() => { el.style.display = 'none'; }, 4000);
+    }
+
+    async function loadProfile() {
+        try {
+            const res = await fetch(`${API_BASE}/api/profile`, { credentials: 'include' });
+            if (res.status === 401) {
+                window.location.href = '/login.html';
+                return;
+            }
+            const data = await res.json();
+
+            document.getElementById('displayName').textContent = data.username;
+            document.getElementById('avatarLetter').textContent = (data.username || '?')[0].toUpperCase();
+            document.getElementById('displayRole').innerHTML =
+                `<span class="role-badge ${data.role === 'admin' ? 'role-admin' : 'role-user'}">${data.role === 'admin' ? '管理员' : '普通用户'}</span>`;
+
+            document.getElementById('infoUsername').textContent = data.username;
+            document.getElementById('infoRole').innerHTML =
+                `<span class="role-badge ${data.role === 'admin' ? 'role-admin' : 'role-user'}">${data.role === 'admin' ? '管理员' : '普通用户'}</span>`;
+            document.getElementById('infoPhone').textContent = data.phone || '未设置';
+            document.getElementById('phoneInput').value = data.phone || '';
+
+            if (data.created_at) {
+                const d = new Date(data.created_at);
+                document.getElementById('infoCreated').textContent =
+                    `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            } else {
+                document.getElementById('infoCreated').textContent = '—';
+            }
+        } catch (err) {
+            showMsg('加载个人信息失败', 'error');
+        }
+    }
+
+    async function savePhone() {
+        const phone = document.getElementById('phoneInput').value.trim();
+        const btn = document.getElementById('savePhoneBtn');
+        btn.disabled = true;
+        btn.textContent = '保存中...';
+        try {
+            const res = await fetch(`${API_BASE}/api/profile`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ phone })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showMsg('手机号已更新', 'success');
+                loadProfile();
+            } else {
+                showMsg(data.message || '更新失败', 'error');
+            }
+        } catch (err) {
+            showMsg('网络错误', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '保存';
+        }
+    }
+
+    document.getElementById('pwdForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const oldPwd = document.getElementById('oldPwd').value;
+        const newPwd = document.getElementById('newPwd').value;
+        const confirmPwd = document.getElementById('confirmPwd').value;
+
+        if (newPwd !== confirmPwd) {
+            showMsg('两次输入的新密码不一致', 'error');
+            return;
+        }
+        if (newPwd.length < 4) {
+            showMsg('新密码至少4位', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('pwdBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 修改中...';
+
+        try {
+            const res = await fetch(`${API_BASE}/api/profile/password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ old_password: oldPwd, new_password: newPwd })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showMsg('密码修改成功', 'success');
+                document.getElementById('pwdForm').reset();
+            } else {
+                showMsg(data.message || '修改失败', 'error');
+            }
+        } catch (err) {
+            showMsg('网络错误', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> 修改密码';
+        }
+    });
+
+    loadProfile();
+</script>
+</body>
+</html>
