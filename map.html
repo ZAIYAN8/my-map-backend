@@ -635,10 +635,7 @@
             const res = await fetch('/api/auth/check', { credentials: 'include' });
             const data = await res.json();
             if (data.logged_in) {
-                document.getElementById('userInfo').innerHTML = `
-                    <a href="/profile.html" class="btn-link">个人账号</a>
-                    <span style="color:var(--border);margin:0 4px;">|</span>
-                    <a href="/logout" class="btn-link">退出</a>`;
+                document.getElementById('userInfo').innerHTML = `已登录`;
                 loadPoints();
             } else {
                 document.getElementById('userInfo').innerHTML = `
