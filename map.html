@@ -745,7 +745,6 @@
             const loc = [p.city, p.province].filter(Boolean).join(' · ') || '位置未知';
             const timeStr = p.created_at ? new Date(p.created_at).toLocaleDateString('zh-CN') : '';
             return `<div class="point-list-item" data-id="${p.id}" data-lat="${f.geometry.coordinates[1]}" data-lng="${f.geometry.coordinates[0]}" onclick="clickPointItem(this, ${f.geometry.coordinates[1]}, ${f.geometry.coordinates[0]})">
-                <div class="point-list-num">${idx + 1}</div>
                 <div class="point-list-info">
                     <div class="point-list-name">${escHtml(p.name) || '未命名'}</div>
                     <div class="point-list-loc">${escHtml(loc)}${timeStr ? ' · ' + timeStr : ''}</div>

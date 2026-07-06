@@ -527,13 +527,14 @@ def add_point():
     user_id = get_current_user_id()
     conn = get_db_connection()
     cur = conn.cursor()
+    created_at = data.get('created_at') or None
     cur.execute("""
-        INSERT INTO points (name, latitude, longitude, image_url, description, province, city, user_id, marker_icon)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO points (name, latitude, longitude, image_url, description, province, city, user_id, marker_icon, created_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id
     """, (data['name'], data['latitude'], data['longitude'], data.get('image_url', ''),
           data.get('description', ''), data.get('province', ''), data.get('city', ''), user_id,
-          data.get('marker_icon', '📍')))
+          data.get('marker_icon', '📍'), created_at))
     new_id = cur.fetchone()[0]
     conn.commit()
     cur.close()
@@ -554,12 +555,13 @@ def update_point(point_id):
         if not row or row[0] != user['id']:
             cur.close(); conn.close()
             return jsonify({'error': '无权操作此点位'}), 403
+    created_at = data.get('created_at') or None
     cur.execute("""
         UPDATE points SET name=%s, latitude=%s, longitude=%s, image_url=%s,
-        description=%s, province=%s, city=%s, marker_icon=%s WHERE id=%s
+        description=%s, province=%s, city=%s, marker_icon=%s, created_at=%s WHERE id=%s
     """, (data['name'], data['latitude'], data['longitude'], data.get('image_url', ''),
           data.get('description', ''), data.get('province', ''), data.get('city', ''),
-          data.get('marker_icon', '📍'), point_id))
+          data.get('marker_icon', '📍'), created_at, point_id))
     conn.commit()
     cur.close()
     conn.close()
