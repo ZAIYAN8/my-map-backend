@@ -111,7 +111,7 @@
             top: 80px;
             left: 16px;
             bottom: 36px;
-            display: none; /* default hidden */
+            display: none;
             width: 320px;
             max-width: 82vw;
             z-index: 998;
@@ -520,7 +520,7 @@
 </button>
 
 <!-- ===== Point List Panel ===== -->
-<div class="point-list-panel" id="pointListPanel">
+<div class="point-list-panel" id="pointListPanel" style="display:none;">
     <div class="point-list-header">
         <span class="point-list-title">📍 点位列表</span>
         <select id="listCitySelect" title="筛选城市">
@@ -742,11 +742,10 @@
 
         body.innerHTML = filtered.map((f, idx) => {
             const p = f.properties;
-            const icon = p.marker_icon || '📍';
             const loc = [p.city, p.province].filter(Boolean).join(' · ') || '位置未知';
             const timeStr = p.created_at ? new Date(p.created_at).toLocaleDateString('zh-CN') : '';
             return `<div class="point-list-item" data-id="${p.id}" data-lat="${f.geometry.coordinates[1]}" data-lng="${f.geometry.coordinates[0]}" onclick="clickPointItem(this, ${f.geometry.coordinates[1]}, ${f.geometry.coordinates[0]})">
-                <div class="point-list-num" style="background:transparent;box-shadow:none;font-size:22px;">${icon}</div>
+                <div class="point-list-num">${idx + 1}</div>
                 <div class="point-list-info">
                     <div class="point-list-name">${escHtml(p.name) || '未命名'}</div>
                     <div class="point-list-loc">${escHtml(loc)}${timeStr ? ' · ' + timeStr : ''}</div>
