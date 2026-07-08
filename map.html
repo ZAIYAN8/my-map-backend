@@ -42,30 +42,11 @@
         #map { height: 100vh; width: 100%; z-index: 1; }
         .emoji-marker { background: none !important; border: none !important; }
 
-        /* ========== Heavenly Path ========== */
-        @keyframes stairGlow {
-            0%, 100% { opacity: 0.6; }
-            50%      { opacity: 1; }
-        }
         @keyframes sparkleDash {
-            to { stroke-dashoffset: -40; }
+            to { stroke-dashoffset: -28; }
         }
-        .heaven-path {
-            stroke-linecap: round;
-        }
-        .sparkle-line {
-            animation: sparkleDash 1.5s linear infinite;
-        }
-        /* Dragon */
-        .dragon-marker {
-            font-size: 32px;
-            filter: drop-shadow(0 0 8px #FBBF24) drop-shadow(0 0 16px #F59E0B);
-            animation: dragonFloat 0.8s ease-in-out infinite alternate;
-        }
-        @keyframes dragonFloat {
-            from { transform: translateY(-3px) scale(1); }
-            to   { transform: translateY(3px) scale(1.08); }
-        }
+        .heaven-path { stroke-linecap: round; }
+        .sparkle-line { animation: sparkleDash 1.5s linear infinite; }
 
         /* ========== Top Bar ========== */
         .topbar {
@@ -621,80 +602,37 @@
     let allPointsData = [];
 
     // ===== 粉红高铁：每两个点位间独立列车 =====
-    // ===== 天梯轨道 + 龙 + 天使 =====
-    let dragonAnimId = null;
-    let dragonMarkers = [];
-
+    // ===== 耀眼金色天梯 =====
     function startTrainAnimation(latlngs) {
-        stopDragonAnimation();
         if (!latlngs || latlngs.length < 2) return;
-
         for (let i = 1; i < latlngs.length; i++) {
             const a = latlngs[i-1], b = latlngs[i];
 
-            // 天梯轨道：3层光晕
-            // 层1: 金色宽光晕
+            // 层1: 外发光光晕
             L.polyline([a, b], {
-                color: '#F59E0B', weight: 7, opacity: 0.2,
+                color: '#F59E0B', weight: 9, opacity: 0.18,
             }).addTo(timelineLayer);
-            // 层2: 白光台阶
+
+            // 层2: 金色流光台阶
             const steps = L.polyline([a, b], {
-                color: '#FEF3C7', weight: 3, opacity: 0.7, className: 'heaven-path sparkle-line',
+                color: '#FBBF24', weight: 4, opacity: 0.85, className: 'heaven-path sparkle-line',
             }).addTo(timelineLayer);
             if (steps._path) {
-                steps._path.style.strokeDasharray = '6 8';
+                steps._path.style.strokeDasharray = '8 6';
                 steps._path.style.strokeLinecap = 'round';
-                steps._path.style.filter = 'drop-shadow(0 0 4px #FBBF24)';
+                steps._path.style.filter = 'drop-shadow(0 0 6px #FBBF24) drop-shadow(0 0 14px #F59E0B) drop-shadow(0 0 24px rgba(245,158,11,0.5))';
             }
-            // 层3: 金线核心
+
+            // 层3: 纯白耀眼核心
             const core = L.polyline([a, b], {
-                color: '#FBBF24', weight: 1.5, opacity: 0.9, className: 'heaven-path',
+                color: '#FFFBEB', weight: 2, opacity: 0.95, className: 'heaven-path sparkle-line',
             }).addTo(timelineLayer);
             if (core._path) {
-                core._path.style.strokeDasharray = '4 12';
+                core._path.style.strokeDasharray = '3 9';
                 core._path.style.strokeLinecap = 'round';
+                core._path.style.filter = 'drop-shadow(0 0 3px #FFFFFF) drop-shadow(0 0 8px #FEF3C7)';
             }
-
-            // 天使：每段起点放一个
-            const angelIcon = L.divIcon({
-                html: '<div style="font-size:18px;animation:stairGlow 2s ease-in-out infinite;filter:drop-shadow(0 0 3px #FBBF24);">👼</div>',
-                className: '',
-                iconSize: [20, 20], iconAnchor: [10, 10],
-            });
-            L.marker(a, { icon: angelIcon, zIndexOffset: 500 }).addTo(timelineLayer);
-
-            // 龙：每段一条，沿轨道飞行
-            const dragonIcon = L.divIcon({
-                html: '<div class="dragon-marker">🐉</div>',
-                className: '',
-                iconSize: [36, 36], iconAnchor: [18, 18],
-            });
-            const dragon = L.marker(a, { icon: dragonIcon, zIndexOffset: 1000 }).addTo(timelineLayer);
-            dragon._segStart = a;
-            dragon._segEnd = b;
-            dragon._progress = Math.random(); // 随机初始位置
-            dragonMarkers.push(dragon);
         }
-
-        // 龙飞行动画循环
-        const SPEED = 1 / (5 * 30); // 5秒完成一段 (30fps)
-        function frame() {
-            for (const d of dragonMarkers) {
-                d._progress += SPEED;
-                if (d._progress > 1) d._progress -= 1;
-                const lat = d._segStart[0] + (d._segEnd[0] - d._segStart[0]) * d._progress;
-                const lng = d._segStart[1] + (d._segEnd[1] - d._segStart[1]) * d._progress;
-                d.setLatLng([lat, lng]);
-            }
-            dragonAnimId = setTimeout(frame, 1000 / 30);
-        }
-        frame();
-    }
-
-    function stopDragonAnimation() {
-        if (dragonAnimId) { clearTimeout(dragonAnimId); dragonAnimId = null; }
-        dragonMarkers.forEach(d => timelineLayer.removeLayer(d));
-        dragonMarkers = [];
     }
 
     // ===== Panel Control =====
@@ -788,7 +726,6 @@
 
     function filterByCity(selected) {
         markersLayer.clearLayers();
-        stopDragonAnimation();
         timelineLayer.clearLayers();
         const filtered = (selected === 'all') ? allPointsData : allPointsData.filter(f => f.properties.city === selected);
         // Update point list panel
