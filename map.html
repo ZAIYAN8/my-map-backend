@@ -42,16 +42,29 @@
         #map { height: 100vh; width: 100%; z-index: 1; }
         .emoji-marker { background: none !important; border: none !important; }
 
-        /* ========== Pink Train Sweep ========== */
-        @keyframes trainSweep {
-            0%   { stroke-dashoffset: 250%; }
-            100% { stroke-dashoffset: 0%; }
+        /* ========== Heavenly Path ========== */
+        @keyframes stairGlow {
+            0%, 100% { opacity: 0.6; }
+            50%      { opacity: 1; }
         }
-        .train-segment {
+        @keyframes sparkleDash {
+            to { stroke-dashoffset: -40; }
+        }
+        .heaven-path {
             stroke-linecap: round;
         }
-        .train-glass {
-            stroke-linecap: round;
+        .sparkle-line {
+            animation: sparkleDash 1.5s linear infinite;
+        }
+        /* Dragon */
+        .dragon-marker {
+            font-size: 32px;
+            filter: drop-shadow(0 0 8px #FBBF24) drop-shadow(0 0 16px #F59E0B);
+            animation: dragonFloat 0.8s ease-in-out infinite alternate;
+        }
+        @keyframes dragonFloat {
+            from { transform: translateY(-3px) scale(1); }
+            to   { transform: translateY(3px) scale(1.08); }
         }
 
         /* ========== Top Bar ========== */
@@ -608,39 +621,80 @@
     let allPointsData = [];
 
     // ===== 粉红高铁：每两个点位间独立列车 =====
+    // ===== 天梯轨道 + 龙 + 天使 =====
+    let dragonAnimId = null;
+    let dragonMarkers = [];
+
     function startTrainAnimation(latlngs) {
+        stopDragonAnimation();
         if (!latlngs || latlngs.length < 2) return;
+
         for (let i = 1; i < latlngs.length; i++) {
-            const pair = [latlngs[i-1], latlngs[i]];
-            // 玻璃基底
-            const base = L.polyline(pair, {
-                color: '#F472B6', weight: 5, opacity: 0.25, className: 'train-glass',
+            const a = latlngs[i-1], b = latlngs[i];
+
+            // 天梯轨道：3层光晕
+            // 层1: 金色宽光晕
+            L.polyline([a, b], {
+                color: '#F59E0B', weight: 7, opacity: 0.2,
             }).addTo(timelineLayer);
-            if (base._path) {
-                base._path.style.strokeDasharray = '100% 150%';
-                base._path.style.strokeLinecap = 'round';
-                base._path.style.animation = 'trainSweep 1.5s linear infinite';
-            }
-            // 主体列车（=段长，经过时全段粉红）
-            const seg = L.polyline(pair, {
-                color: '#EC4899', weight: 3, opacity: 0.95, className: 'train-segment',
+            // 层2: 白光台阶
+            const steps = L.polyline([a, b], {
+                color: '#FEF3C7', weight: 3, opacity: 0.7, className: 'heaven-path sparkle-line',
             }).addTo(timelineLayer);
-            if (seg._path) {
-                seg._path.style.strokeDasharray = '100% 150%';
-                seg._path.style.strokeLinecap = 'round';
-                seg._path.style.animation = 'trainSweep 1.5s linear infinite';
-                seg._path.style.filter = 'drop-shadow(0 0 5px #F472B6) drop-shadow(0 0 12px #EC4899)';
+            if (steps._path) {
+                steps._path.style.strokeDasharray = '6 8';
+                steps._path.style.strokeLinecap = 'round';
+                steps._path.style.filter = 'drop-shadow(0 0 4px #FBBF24)';
             }
-            // 玻璃高光
-            const hl = L.polyline(pair, {
-                color: '#FCE7F3', weight: 1.2, opacity: 0.8, className: 'train-glass',
+            // 层3: 金线核心
+            const core = L.polyline([a, b], {
+                color: '#FBBF24', weight: 1.5, opacity: 0.9, className: 'heaven-path',
             }).addTo(timelineLayer);
-            if (hl._path) {
-                hl._path.style.strokeDasharray = '80% 170%';
-                hl._path.style.strokeLinecap = 'round';
-                hl._path.style.animation = 'trainSweep 1.5s linear infinite';
+            if (core._path) {
+                core._path.style.strokeDasharray = '4 12';
+                core._path.style.strokeLinecap = 'round';
             }
+
+            // 天使：每段起点放一个
+            const angelIcon = L.divIcon({
+                html: '<div style="font-size:18px;animation:stairGlow 2s ease-in-out infinite;filter:drop-shadow(0 0 3px #FBBF24);">👼</div>',
+                className: '',
+                iconSize: [20, 20], iconAnchor: [10, 10],
+            });
+            L.marker(a, { icon: angelIcon, zIndexOffset: 500 }).addTo(timelineLayer);
+
+            // 龙：每段一条，沿轨道飞行
+            const dragonIcon = L.divIcon({
+                html: '<div class="dragon-marker">🐉</div>',
+                className: '',
+                iconSize: [36, 36], iconAnchor: [18, 18],
+            });
+            const dragon = L.marker(a, { icon: dragonIcon, zIndexOffset: 1000 }).addTo(timelineLayer);
+            dragon._segStart = a;
+            dragon._segEnd = b;
+            dragon._progress = Math.random(); // 随机初始位置
+            dragonMarkers.push(dragon);
         }
+
+        // 龙飞行动画循环
+        const SPEED = 1 / (5 * 30); // 5秒完成一段 (30fps)
+        function frame() {
+            for (const d of dragonMarkers) {
+                d._progress += SPEED;
+                if (d._progress > 1) d._progress -= 1;
+                const lat = d._segStart[0] + (d._segEnd[0] - d._segStart[0]) * d._progress;
+                const lng = d._segStart[1] + (d._segEnd[1] - d._segStart[1]) * d._progress;
+                d.setLatLng([lat, lng]);
+            }
+            dragonAnimId = setTimeout(frame, 1000 / 30);
+        }
+        frame();
+    }
+
+    function stopDragonAnimation() {
+        if (dragonAnimId) { clearTimeout(dragonAnimId); dragonAnimId = null; }
+        dragonMarkers.forEach(d => timelineLayer.removeLayer(d));
+        dragonMarkers = [];
     }
 
     // ===== Panel Control =====
@@ -734,6 +788,7 @@
 
     function filterByCity(selected) {
         markersLayer.clearLayers();
+        stopDragonAnimation();
         timelineLayer.clearLayers();
         const filtered = (selected === 'all') ? allPointsData : allPointsData.filter(f => f.properties.city === selected);
         // Update point list panel
