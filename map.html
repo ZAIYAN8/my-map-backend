@@ -42,6 +42,16 @@
         #map { height: 100vh; width: 100%; z-index: 1; }
         .emoji-marker { background: none !important; border: none !important; }
 
+        /* ========== Flow Line Animation ========== */
+        @keyframes flowDash {
+            to { stroke-dashoffset: -40; }
+        }
+        .flow-line {
+            animation: flowDash 1.5s linear infinite;
+            stroke-dasharray: 12 28;
+            stroke-linecap: round;
+        }
+
         /* ========== Top Bar ========== */
         .topbar {
             position: fixed;
@@ -535,13 +545,7 @@
 
 <!-- ===== Top Bar ===== -->
 <div class="topbar">
-    <div class="topbar-brand">
-        <div class="logo">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-        </div>
-        GIS 地图浏览
-    </div>
-    <div class="topbar-right">
+        <div class="topbar-right">
         <div class="topbar-pill" id="userPill">
             <span id="userInfo"></span>
         </div>
@@ -712,18 +716,21 @@
         });
         map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50] });
 
-        // 按时序画红线连接
+        // 按时序画动态流水线：从最早流向最新
         const timed = filtered
             .filter(f => f.properties.created_at)
             .sort((a, b) => new Date(a.properties.created_at).getTime() - new Date(b.properties.created_at).getTime());
         if (timed.length >= 2) {
             const latlngs = timed.map(f => [f.geometry.coordinates[1], f.geometry.coordinates[0]]);
-            L.polyline(latlngs, {
-                color: '#DC2626',
-                weight: 2.5,
-                opacity: 0.5,
-                dashArray: '8 6',
+            const flowLine = L.polyline(latlngs, {
+                color: '#3B82F6',
+                weight: 3,
+                opacity: 0.7,
             }).addTo(timelineLayer);
+            // 添加流动动画
+            if (flowLine._path) {
+                flowLine._path.classList.add('flow-line');
+            }
         }
     }
 
