@@ -813,15 +813,26 @@
         if (latlng) {
             map.setView(latlng, map.getMaxZoom(), { animate: true, duration: 0.5 });
         }
-        const imgUrl = props.image_url || '';
-        const imgSection = imgUrl
+        const images = props.images || [];
+        const coverUrl = props.image_url || (images.length > 0 ? images[0].url : '');
+        const imgSection = images.length > 0
             ? `<div class="panel-img-container" id="imgContainer">
-                <button type="button" class="panel-img-btn" data-img="${escHtml(imgUrl)}" onclick="loadPanelImage(this)">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                    点击查看图片
-                </button>
+                ${images.map((img, idx) => `
+                <div style="margin-bottom:8px;">
+                    <button type="button" class="panel-img-btn" data-img="${escHtml(img.url)}" onclick="loadPanelImage(this)" style="padding:16px 24px;font-size:13px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        查看图片 ${idx + 1}
+                    </button>
+                </div>`).join('')}
                </div>`
-            : '';
+            : (coverUrl
+                ? `<div class="panel-img-container" id="imgContainer">
+                    <button type="button" class="panel-img-btn" data-img="${escHtml(coverUrl)}" onclick="loadPanelImage(this)">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        点击查看图片
+                    </button>
+                   </div>`
+                : '');
 
         const timeStr = props.created_at ? new Date(props.created_at).toLocaleString('zh-CN') : '';
         document.getElementById('panelTitle').textContent = (props.marker_icon || '📍') + ' ' + (props.name || '未命名');

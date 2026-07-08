@@ -420,6 +420,10 @@ def get_points():
                         'id', id,
                         'name', name,
                         'image_url', image_url,
+                        'images', COALESCE((
+                            SELECT json_agg(json_build_object('id', pi.id, 'url', pi.image_url) ORDER BY pi.sort_order)
+                            FROM point_images pi WHERE pi.point_id = p.id
+                        ), '[]'::json),
                         'description', description,
                         'province', province,
                         'city', city,
@@ -505,14 +509,28 @@ def admin_get_points():
         ORDER BY p.id
     """, params)
     rows = cur.fetchall()
+
+    # 批量查询所有点位图片
+    point_ids = [r[0] for r in rows]
+    images_map = {}
+    if point_ids:
+        cur.execute("SELECT point_id, id, image_url FROM point_images WHERE point_id = ANY(%s) ORDER BY point_id, sort_order",
+                    (point_ids,))
+        for img in cur.fetchall():
+            images_map.setdefault(img[0], []).append({'id': img[1], 'url': img[2]})
     cur.close()
     conn.close()
+
     points = []
     for row in rows:
+        pid = row[0]
+        imgs = images_map.get(pid, [])
         points.append({
-            'id': row[0], 'name': row[1],
+            'id': pid, 'name': row[1],
             'latitude': float(row[2]), 'longitude': float(row[3]),
-            'image_url': row[4], 'description': row[5] or '',
+            'image_url': imgs[0]['url'] if imgs else (row[4] or ''),
+            'images': imgs,
+            'description': row[5] or '',
             'province': row[6] or '', 'city': row[7] or '',
             'user_id': row[8], 'owner_name': row[9],
             'created_at': row[10].isoformat() if row[10] else None,
@@ -597,11 +615,50 @@ def clear_point_image(point_id):
         if not row or row[0] != user['id']:
             cur.close(); conn.close()
             return jsonify({'error': '无权操作此点位'}), 403
+    cur.execute("DELETE FROM point_images WHERE point_id = %s", (point_id,))
     cur.execute("UPDATE points SET image_url = '' WHERE id = %s", (point_id,))
     conn.commit()
     cur.close()
     conn.close()
     return jsonify({'message': '图片已清除'})
+
+@app.route('/api/admin/points/<int:point_id>/images', methods=['POST'])
+@login_required
+def add_point_image(point_id):
+    """给点位添加一张图片"""
+    data = request.json or {}
+    url = data.get('image_url', '').strip()
+    if not url:
+        return jsonify({'error': '缺少 image_url'}), 400
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT COALESCE(MAX(sort_order),0)+1 FROM point_images WHERE point_id = %s", (point_id,))
+    next_order = cur.fetchone()[0]
+    cur.execute("INSERT INTO point_images (point_id, image_url, sort_order) VALUES (%s, %s, %s) RETURNING id",
+                (point_id, url, next_order))
+    new_id = cur.fetchone()[0]
+    # 更新 points.image_url 为第一张图
+    cur.execute("UPDATE points SET image_url = (SELECT image_url FROM point_images WHERE point_id = %s ORDER BY sort_order LIMIT 1) WHERE id = %s",
+                (point_id, point_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'id': new_id, 'message': '图片已添加'}), 201
+
+@app.route('/api/admin/points/<int:point_id>/images/<int:image_id>', methods=['DELETE'])
+@login_required
+def remove_point_image(point_id, image_id):
+    """删除点位的一张图片"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM point_images WHERE id = %s AND point_id = %s", (image_id, point_id))
+    # 更新 points.image_url
+    cur.execute("UPDATE points SET image_url = COALESCE((SELECT image_url FROM point_images WHERE point_id = %s ORDER BY sort_order LIMIT 1), '') WHERE id = %s",
+                (point_id, point_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'message': '图片已删除'})
 
 # ---------- COS 诊断 ----------
 

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"F:/Git/bin/git.exe\" -C \"f:/qgis/Full process\" commit -m \"feat: 移除顶栏GIS品牌盒+时序红线改为动态蓝色流水线\")",
+      "Bash(\"F:/Git/bin/git.exe\" -C \"f:/qgis/Full process\" commit -m \"feat: 顶栏重设计玻璃胶囊按钮+流水线3层玻璃体反光效果\")",
+      "Bash(\"F:/Git/bin/git.exe\" -C \"f:/qgis/Full process\" commit -m \"feat: 左侧三角标签切换面板+粉红粒子流光线\")",
+      "Bash(\"F:/Git/bin/git.exe\" -C \"f:/qgis/Full process\" commit -m \"feat: 中国省份边界图层+粉红高铁粒子沿轨道穿行\")",
+      "Bash(\"F:/Git/bin/git.exe\" -C \"f:/qgis/Full process\" commit -m \"fix: 删省份图层+高铁改为每段独立1.5s超长列车全段粉红\")",
+      "Bash(\"F:/Git/bin/git.exe\" -C \"f:/qgis/Full process\" commit -m \"fix: 高铁同时发出+车身微长+玻璃体3层效果\")"
+    ]
+  }
+}
