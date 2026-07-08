@@ -44,10 +44,13 @@
 
         /* ========== Pink Train Sweep ========== */
         @keyframes trainSweep {
-            0%   { stroke-dashoffset: 400%; }
-            100% { stroke-dashoffset: -100%; }
+            0%   { stroke-dashoffset: 250%; }
+            100% { stroke-dashoffset: 0%; }
         }
         .train-segment {
+            stroke-linecap: round;
+        }
+        .train-glass {
             stroke-linecap: round;
         }
 
@@ -608,18 +611,29 @@
     function startTrainAnimation(latlngs) {
         if (!latlngs || latlngs.length < 2) return;
         for (let i = 1; i < latlngs.length; i++) {
-            const seg = L.polyline([latlngs[i-1], latlngs[i]], {
-                color: '#F472B6',
-                weight: 4,
-                opacity: 0.85,
-                className: 'train-segment',
+            const pair = [latlngs[i-1], latlngs[i]];
+            // 第1层：玻璃基底（宽、半透明粉红）
+            L.polyline(pair, {
+                color: '#F472B6', weight: 5, opacity: 0.3, className: 'train-glass',
             }).addTo(timelineLayer);
-            // SVG path 上加 CSS 动画
+            // 第2层：主体列车线
+            const seg = L.polyline(pair, {
+                color: '#EC4899', weight: 3.5, opacity: 0.9, className: 'train-segment',
+            }).addTo(timelineLayer);
             if (seg._path) {
-                seg._path.style.strokeDasharray = '400% 100%';
+                seg._path.style.strokeDasharray = '130% 120%';
+                seg._path.style.strokeLinecap = 'round';
                 seg._path.style.animation = 'trainSweep 1.5s linear infinite';
-                seg._path.style.animationDelay = (i * 0.15) + 's'; // 每段微错开
-                seg._path.style.filter = 'drop-shadow(0 0 6px #EC4899) drop-shadow(0 0 14px #DB2777)';
+                seg._path.style.filter = 'drop-shadow(0 0 5px #F472B6) drop-shadow(0 0 10px #EC4899)';
+            }
+            // 第3层：玻璃高光（细白线，略窄dash）
+            const hl = L.polyline(pair, {
+                color: '#FCE7F3', weight: 1.2, opacity: 0.7, className: 'train-glass',
+            }).addTo(timelineLayer);
+            if (hl._path) {
+                hl._path.style.strokeDasharray = '100% 150%';
+                hl._path.style.strokeLinecap = 'round';
+                hl._path.style.animation = 'trainSweep 1.5s linear infinite';
             }
         }
     }
