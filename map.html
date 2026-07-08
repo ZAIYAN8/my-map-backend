@@ -42,62 +42,13 @@
         #map { height: 100vh; width: 100%; z-index: 1; }
         .emoji-marker { background: none !important; border: none !important; }
 
-        /* ========== Flow Line Animation (Pink Streamer Ray) ========== */
-        @keyframes flowDash {
-            to { stroke-dashoffset: -24; }
+        /* ========== Pink Train Sweep ========== */
+        @keyframes trainSweep {
+            0%   { stroke-dashoffset: 400%; }
+            100% { stroke-dashoffset: -100%; }
         }
-        @keyframes flowDashSlow {
-            to { stroke-dashoffset: -36; }
-        }
-        @keyframes flowDashFast {
-            to { stroke-dashoffset: -18; }
-        }
-        .flow-glow-pink {
-            filter: drop-shadow(0 0 8px rgba(236,72,153,0.7)) drop-shadow(0 0 16px rgba(236,72,153,0.35));
-        }
-        .flow-particle-1 {
-            animation: flowDash 1.8s linear infinite;
-            stroke-dasharray: 4 20;
+        .train-segment {
             stroke-linecap: round;
-        }
-        .flow-particle-2 {
-            animation: flowDashSlow 2.4s linear infinite;
-            stroke-dasharray: 3 33;
-            stroke-linecap: round;
-            animation-delay: -0.6s;
-        }
-        .flow-particle-3 {
-            animation: flowDashFast 1.2s linear infinite;
-            stroke-dasharray: 2 16;
-            stroke-linecap: round;
-            animation-delay: -0.3s;
-        }
-
-        /* ========== Pink Train Particle ========== */
-        .train-particle {
-            width: 14px; height: 14px;
-            background: radial-gradient(circle, #F472B6 0%, #EC4899 40%, transparent 70%);
-            border-radius: 50%;
-            box-shadow:
-                0 0 8px #F472B6,
-                0 0 20px #EC4899,
-                0 0 40px #DB2777,
-                0 0 60px rgba(219,39,119,0.5);
-            animation: trainPulse 0.6s ease-in-out infinite alternate;
-        }
-        @keyframes trainPulse {
-            from { transform: scale(0.85); opacity: 0.8; }
-            to { transform: scale(1.15); opacity: 1; }
-        }
-        .province-tooltip {
-            font-size: 12px;
-            font-weight: 600;
-            color: #475569;
-            background: rgba(255,255,255,0.85);
-            border: none;
-            border-radius: 4px;
-            padding: 2px 8px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
         }
 
         /* ========== Top Bar ========== */
@@ -653,85 +604,24 @@
     const timelineLayer = L.layerGroup().addTo(map);
     let allPointsData = [];
 
-    // ===== 加载中国省份边界 =====
-    let provinceLayer;
-    fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
-        .then(r => r.json())
-        .then(geo => {
-            provinceLayer = L.geoJSON(geo, {
-                style: {
-                    color: '#94A3B8',
-                    weight: 0.8,
-                    opacity: 0.4,
-                    fillColor: '#CBD5E1',
-                    fillOpacity: 0.06,
-                },
-                onEachFeature: (feature, layer) => {
-                    layer.bindTooltip(feature.properties.name, { sticky: true, opacity: 0.7, className: 'province-tooltip' });
-                }
-            }).addTo(map);
-            provinceLayer.bringToBack();
-        }).catch(() => {});
-
-    // ===== 粉红高铁粒子动画 =====
-    let trainMarker = null;
-    let trainAnimId = null;
-
+    // ===== 粉红高铁：每两个点位间独立列车 =====
     function startTrainAnimation(latlngs) {
-        stopTrainAnimation();
         if (!latlngs || latlngs.length < 2) return;
-
-        // 隐藏轨道（用于穿行路径）
-        const track = L.polyline(latlngs, { color: 'transparent', weight: 1, opacity: 0 }).addTo(timelineLayer);
-
-        // 粉红高铁光点
-        const trainIcon = L.divIcon({
-            html: '<div class="train-particle"></div>',
-            className: '',
-            iconSize: [16, 16],
-            iconAnchor: [8, 8],
-        });
-        trainMarker = L.marker(latlngs[0], { icon: trainIcon, zIndexOffset: 1000 }).addTo(timelineLayer);
-
-        // 沿轨道运行的动画
-        const totalDist = latlngs.reduce((sum, p, i) => {
-            if (i === 0) return 0;
-            const a = map.latLngToContainerPoint(L.latLng(latlngs[i-1]));
-            const b = map.latLngToContainerPoint(L.latLng(p));
-            return sum + a.distanceTo(b);
-        }, 0);
-
-        let progress = 0;
-        const speed = 0.0008; // 每帧前进比例
-        const fps = 30;
-
-        function animate() {
-            progress += speed;
-            if (progress > 1) progress = 0; // 循环
-            // 按距离比例映射到线段
-            let target = progress * totalDist;
-            let acc = 0;
-            for (let i = 1; i < latlngs.length; i++) {
-                const a = map.latLngToContainerPoint(L.latLng(latlngs[i-1]));
-                const b = map.latLngToContainerPoint(L.latLng(latlngs[i]));
-                const seg = a.distanceTo(b);
-                if (acc + seg >= target) {
-                    const t = (target - acc) / seg;
-                    const lat = latlngs[i-1][0] + (latlngs[i][0] - latlngs[i-1][0]) * t;
-                    const lng = latlngs[i-1][1] + (latlngs[i][1] - latlngs[i-1][1]) * t;
-                    trainMarker.setLatLng([lat, lng]);
-                    break;
-                }
-                acc += seg;
+        for (let i = 1; i < latlngs.length; i++) {
+            const seg = L.polyline([latlngs[i-1], latlngs[i]], {
+                color: '#F472B6',
+                weight: 4,
+                opacity: 0.85,
+                className: 'train-segment',
+            }).addTo(timelineLayer);
+            // SVG path 上加 CSS 动画
+            if (seg._path) {
+                seg._path.style.strokeDasharray = '400% 100%';
+                seg._path.style.animation = 'trainSweep 1.5s linear infinite';
+                seg._path.style.animationDelay = (i * 0.15) + 's'; // 每段微错开
+                seg._path.style.filter = 'drop-shadow(0 0 6px #EC4899) drop-shadow(0 0 14px #DB2777)';
             }
-            trainAnimId = setTimeout(animate, 1000 / fps);
         }
-        animate();
-    }
-
-    function stopTrainAnimation() {
-        if (trainAnimId) { clearTimeout(trainAnimId); trainAnimId = null; }
-        if (trainMarker) { timelineLayer.removeLayer(trainMarker); trainMarker = null; }
     }
 
     // ===== Panel Control =====
@@ -825,7 +715,6 @@
 
     function filterByCity(selected) {
         markersLayer.clearLayers();
-        stopTrainAnimation();
         timelineLayer.clearLayers();
         const filtered = (selected === 'all') ? allPointsData : allPointsData.filter(f => f.properties.city === selected);
         // Update point list panel
