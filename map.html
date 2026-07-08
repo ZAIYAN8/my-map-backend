@@ -42,17 +42,35 @@
         #map { height: 100vh; width: 100%; z-index: 1; }
         .emoji-marker { background: none !important; border: none !important; }
 
-        /* ========== Flow Line Animation ========== */
+        /* ========== Flow Line Animation (Pink Streamer Ray) ========== */
         @keyframes flowDash {
-            to { stroke-dashoffset: -30; }
+            to { stroke-dashoffset: -24; }
         }
-        .flow-glow {
-            filter: drop-shadow(0 0 6px rgba(59,130,246,0.6)) drop-shadow(0 0 12px rgba(59,130,246,0.3));
+        @keyframes flowDashSlow {
+            to { stroke-dashoffset: -36; }
         }
-        .flow-highlight {
-            animation: flowDash 2s linear infinite;
-            stroke-dasharray: 8 22;
+        @keyframes flowDashFast {
+            to { stroke-dashoffset: -18; }
+        }
+        .flow-glow-pink {
+            filter: drop-shadow(0 0 8px rgba(236,72,153,0.7)) drop-shadow(0 0 16px rgba(236,72,153,0.35));
+        }
+        .flow-particle-1 {
+            animation: flowDash 1.8s linear infinite;
+            stroke-dasharray: 4 20;
             stroke-linecap: round;
+        }
+        .flow-particle-2 {
+            animation: flowDashSlow 2.4s linear infinite;
+            stroke-dasharray: 3 33;
+            stroke-linecap: round;
+            animation-delay: -0.6s;
+        }
+        .flow-particle-3 {
+            animation: flowDashFast 1.2s linear infinite;
+            stroke-dasharray: 2 16;
+            stroke-linecap: round;
+            animation-delay: -0.3s;
         }
 
         /* ========== Top Bar ========== */
@@ -112,10 +130,9 @@
         /* ========== Point List Panel ========== */
         .point-list-panel {
             position: fixed;
-            top: 80px;
-            left: 16px;
-            bottom: 36px;
-            display: none;
+            top: 72px;
+            left: -336px; /* hidden off-screen */
+            bottom: 24px;
             width: 320px;
             max-width: 82vw;
             z-index: 998;
@@ -123,13 +140,16 @@
             -webkit-backdrop-filter: blur(16px) saturate(140%);
             backdrop-filter: blur(16px) saturate(140%);
             border: 1px solid rgba(255, 255, 255, 0.5);
-            border-radius: var(--radius-lg);
+            border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
             box-shadow: var(--shadow-lg);
             display: flex;
             flex-direction: column;
             overflow: hidden;
             pointer-events: auto;
-            transition: box-shadow 0.3s;
+            transition: left 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .point-list-panel.open {
+            left: 0;
         }
         .point-list-panel:hover {
             box-shadow: 0 12px 32px rgba(0,0,0,0.15);
@@ -250,36 +270,45 @@
             font-size: 13px;
         }
 
-        /* ========== Panel Toggle Button ========== */
-        .panel-toggle-btn {
+        /* ========== Panel Toggle Tab ========== */
+        .panel-toggle-tab {
             position: fixed;
-            top: 88px;
-            left: 16px;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
             z-index: 999;
-            width: 38px; height: 38px;
-            background: rgba(255,255,255,0.85);
+            width: 22px; height: 72px;
+            background: rgba(255,255,255,0.7);
             -webkit-backdrop-filter: blur(12px);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255,255,255,0.5);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
+            border-left: none;
+            border-radius: 0 var(--radius) var(--radius) 0;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.06);
             cursor: pointer;
-            font-size: 18px;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all var(--transition);
-            color: var(--text-secondary);
+            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            color: var(--text-muted);
         }
-        .panel-toggle-btn:hover {
-            background: var(--surface);
+        .panel-toggle-tab:hover {
+            background: rgba(255,255,255,0.9);
             color: var(--primary);
-            box-shadow: var(--shadow-md);
+            width: 26px;
         }
-        .panel-toggle-btn.active {
-            left: 352px;
-            color: var(--primary);
-            background: var(--primary-light);
+        .panel-toggle-tab svg {
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .panel-toggle-tab.open {
+            left: 320px;
+            border-radius: var(--radius) 0 0 var(--radius);
+            border-left: 1px solid rgba(255,255,255,0.5);
+            border-right: none;
+            box-shadow: -2px 0 8px rgba(0,0,0,0.06);
+        }
+        .panel-toggle-tab.open svg {
+            transform: rotate(180deg);
         }
 
         /* ========== Buttons ========== */
@@ -504,7 +533,9 @@
         /* ========== Responsive ========== */
         @media (max-width: 768px) {
             .info-panel { width: 100%; max-width: 100vw; right: 0; top: 0; bottom: 0; border-radius: 0; }
-            .point-list-panel { width: 240px; left: 6px; top: 70px; bottom: 28px; }
+            .point-list-panel { width: 240px; left: -256px; top: 62px; bottom: 20px; }
+            .point-list-panel.open { left: 0; }
+            .panel-toggle-tab.open { left: 240px; }
             .point-list-name { font-size: 13px; }
             .point-list-loc { font-size: 10px; }
             .topbar { top: 8px; right: 8px; }
@@ -517,13 +548,13 @@
 <!-- ===== Map ===== -->
 <div id="map"></div>
 
-<!-- ===== Panel Toggle Button ===== -->
-<button type="button" class="panel-toggle-btn" id="panelToggleBtn" onclick="togglePointList()" title="点位列表">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+<!-- ===== Panel Toggle Tab (left edge) ===== -->
+<button type="button" class="panel-toggle-tab" id="panelToggleTab" onclick="togglePointList()" title="点位列表">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
 </button>
 
 <!-- ===== Point List Panel ===== -->
-<div class="point-list-panel" id="pointListPanel" style="display:none;">
+<div class="point-list-panel" id="pointListPanel">
     <div class="point-list-header">
         <span class="point-list-title">📍 点位列表</span>
         <select id="listCitySelect" title="筛选城市">
@@ -612,14 +643,14 @@
     // ===== Point List Toggle =====
     function togglePointList() {
         const panel = document.getElementById('pointListPanel');
-        const btn = document.getElementById('panelToggleBtn');
-        const isOpen = panel.style.display === 'flex';
+        const tab = document.getElementById('panelToggleTab');
+        const isOpen = panel.classList.contains('open');
         if (isOpen) {
-            panel.style.display = 'none';
-            btn.classList.remove('active');
+            panel.classList.remove('open');
+            tab.classList.remove('open');
         } else {
-            panel.style.display = 'flex';
-            btn.classList.add('active');
+            panel.classList.add('open');
+            tab.classList.add('open');
         }
     }
 
@@ -712,26 +743,36 @@
         });
         map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50] });
 
-        // 时序流水线：3层玻璃体反光效果
+        // 时序流水线：粉色粒子流光（参考streamer_ray）
         const timed = filtered
             .filter(f => f.properties.created_at)
             .sort((a, b) => new Date(a.properties.created_at).getTime() - new Date(b.properties.created_at).getTime());
         if (timed.length >= 2) {
             const latlngs = timed.map(f => [f.geometry.coordinates[1], f.geometry.coordinates[0]]);
-            // 第1层：外发光（宽、半透明）
+            // 第1层：粉红发光基底
             const glow = L.polyline(latlngs, {
-                color: '#3B82F6', weight: 6, opacity: 0.25,
+                color: '#EC4899', weight: 8, opacity: 0.2,
             }).addTo(timelineLayer);
-            if (glow._path) glow._path.classList.add('flow-glow');
-            // 第2层：主体线
+            if (glow._path) glow._path.classList.add('flow-glow-pink');
+            // 第2层：主体粉红线
             L.polyline(latlngs, {
-                color: '#2563EB', weight: 2.5, opacity: 0.8,
+                color: '#DB2777', weight: 2, opacity: 0.7,
             }).addTo(timelineLayer);
-            // 第3层：流动高光
-            const highlight = L.polyline(latlngs, {
-                color: '#93C5FD', weight: 1.5, opacity: 0.9,
+            // 第3层：粒子流1（较快，亮粉）
+            const p1 = L.polyline(latlngs, {
+                color: '#F9A8D4', weight: 2, opacity: 0.9,
             }).addTo(timelineLayer);
-            if (highlight._path) highlight._path.classList.add('flow-highlight');
+            if (p1._path) p1._path.classList.add('flow-particle-1');
+            // 第4层：粒子流2（较慢，白色）
+            const p2 = L.polyline(latlngs, {
+                color: '#FCE7F3', weight: 1.5, opacity: 0.85,
+            }).addTo(timelineLayer);
+            if (p2._path) p2._path.classList.add('flow-particle-2');
+            // 第5层：粒子流3（最快，纯白光点）
+            const p3 = L.polyline(latlngs, {
+                color: '#FFFFFF', weight: 1, opacity: 0.95,
+            }).addTo(timelineLayer);
+            if (p3._path) p3._path.classList.add('flow-particle-3');
         }
     }
 
