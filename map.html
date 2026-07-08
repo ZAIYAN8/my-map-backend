@@ -612,31 +612,31 @@
         if (!latlngs || latlngs.length < 2) return;
         for (let i = 1; i < latlngs.length; i++) {
             const pair = [latlngs[i-1], latlngs[i]];
-            // 玻璃基底（宽、极淡粉红，仅在有dash穿过时隐约可见）
+            // 玻璃基底
             const base = L.polyline(pair, {
                 color: '#F472B6', weight: 5, opacity: 0.25, className: 'train-glass',
             }).addTo(timelineLayer);
             if (base._path) {
-                base._path.style.strokeDasharray = '130% 120%';
+                base._path.style.strokeDasharray = '100% 150%';
                 base._path.style.strokeLinecap = 'round';
                 base._path.style.animation = 'trainSweep 1.5s linear infinite';
             }
-            // 主体列车（粉红实心dash）
+            // 主体列车（=段长，经过时全段粉红）
             const seg = L.polyline(pair, {
                 color: '#EC4899', weight: 3, opacity: 0.95, className: 'train-segment',
             }).addTo(timelineLayer);
             if (seg._path) {
-                seg._path.style.strokeDasharray = '130% 120%';
+                seg._path.style.strokeDasharray = '100% 150%';
                 seg._path.style.strokeLinecap = 'round';
                 seg._path.style.animation = 'trainSweep 1.5s linear infinite';
                 seg._path.style.filter = 'drop-shadow(0 0 5px #F472B6) drop-shadow(0 0 12px #EC4899)';
             }
-            // 高光（细白线，玻璃反光质感）
+            // 玻璃高光
             const hl = L.polyline(pair, {
                 color: '#FCE7F3', weight: 1.2, opacity: 0.8, className: 'train-glass',
             }).addTo(timelineLayer);
             if (hl._path) {
-                hl._path.style.strokeDasharray = '90% 160%';
+                hl._path.style.strokeDasharray = '80% 170%';
                 hl._path.style.strokeLinecap = 'round';
                 hl._path.style.animation = 'trainSweep 1.5s linear infinite';
             }
