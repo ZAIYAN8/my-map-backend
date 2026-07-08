@@ -46,7 +46,7 @@
             to { stroke-dashoffset: -28; }
         }
         .heaven-path { stroke-linecap: round; }
-        .sparkle-line { animation: sparkleDash 1.5s linear infinite; }
+        .sparkle-line { animation: sparkleDash 1.5s linear infinite; will-change: stroke-dashoffset; }
 
         /* ========== Top Bar ========== */
         .topbar {
@@ -69,9 +69,9 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: rgba(255,255,255,0.7);
-            -webkit-backdrop-filter: blur(16px) saturate(150%);
-            backdrop-filter: blur(16px) saturate(150%);
+            background: rgba(255,255,255,0.8);
+            -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px);
             padding: 6px 12px;
             border-radius: 100px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.06);
@@ -111,9 +111,9 @@
             width: 320px;
             max-width: 82vw;
             z-index: 998;
-            background: rgba(255, 255, 255, 0.55);
-            -webkit-backdrop-filter: blur(16px) saturate(140%);
-            backdrop-filter: blur(16px) saturate(140%);
+            background: rgba(255, 255, 255, 0.75);
+            -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px);
             border: 1px solid rgba(255, 255, 255, 0.5);
             border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
             box-shadow: var(--shadow-lg);
@@ -358,8 +358,8 @@
             width: 420px;
             max-width: 50vw;
             background: rgba(255,255,255,0.95);
-            -webkit-backdrop-filter: blur(20px);
-            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.6);
             border-radius: var(--radius-lg);
             z-index: 1002;
@@ -602,35 +602,33 @@
     let allPointsData = [];
 
     // ===== 粉红高铁：每两个点位间独立列车 =====
-    // ===== 耀眼金色天梯 =====
+    // ===== 耀眼金色天梯（无滤镜，流畅） =====
     function startTrainAnimation(latlngs) {
         if (!latlngs || latlngs.length < 2) return;
         for (let i = 1; i < latlngs.length; i++) {
             const a = latlngs[i-1], b = latlngs[i];
 
-            // 层1: 外发光光晕
+            // 层1: 暖金光晕（宽半透明，模拟发光）
             L.polyline([a, b], {
-                color: '#F59E0B', weight: 9, opacity: 0.18,
+                color: '#FDE68A', weight: 6, opacity: 0.35,
             }).addTo(timelineLayer);
 
             // 层2: 金色流光台阶
             const steps = L.polyline([a, b], {
-                color: '#FBBF24', weight: 4, opacity: 0.85, className: 'heaven-path sparkle-line',
+                color: '#F59E0B', weight: 3, opacity: 0.9, className: 'heaven-path sparkle-line',
             }).addTo(timelineLayer);
             if (steps._path) {
                 steps._path.style.strokeDasharray = '8 6';
                 steps._path.style.strokeLinecap = 'round';
-                steps._path.style.filter = 'drop-shadow(0 0 6px #FBBF24) drop-shadow(0 0 14px #F59E0B) drop-shadow(0 0 24px rgba(245,158,11,0.5))';
             }
 
-            // 层3: 纯白耀眼核心
+            // 层3: 亮白核心
             const core = L.polyline([a, b], {
-                color: '#FFFBEB', weight: 2, opacity: 0.95, className: 'heaven-path sparkle-line',
+                color: '#FFFBEB', weight: 1.5, opacity: 0.95, className: 'heaven-path sparkle-line',
             }).addTo(timelineLayer);
             if (core._path) {
                 core._path.style.strokeDasharray = '3 9';
                 core._path.style.strokeLinecap = 'round';
-                core._path.style.filter = 'drop-shadow(0 0 3px #FFFFFF) drop-shadow(0 0 8px #FEF3C7)';
             }
         }
     }
