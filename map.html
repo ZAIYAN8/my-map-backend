@@ -44,11 +44,14 @@
 
         /* ========== Flow Line Animation ========== */
         @keyframes flowDash {
-            to { stroke-dashoffset: -40; }
+            to { stroke-dashoffset: -30; }
         }
-        .flow-line {
-            animation: flowDash 1.5s linear infinite;
-            stroke-dasharray: 12 28;
+        .flow-glow {
+            filter: drop-shadow(0 0 6px rgba(59,130,246,0.6)) drop-shadow(0 0 12px rgba(59,130,246,0.3));
+        }
+        .flow-highlight {
+            animation: flowDash 2s linear infinite;
+            stroke-dasharray: 8 22;
             stroke-linecap: round;
         }
 
@@ -56,63 +59,54 @@
         .topbar {
             position: fixed;
             top: 16px;
-            left: 16px;
             right: 16px;
             z-index: 1000;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            gap: 12px;
+            gap: 6px;
             pointer-events: none;
         }
-        .topbar > * {
-            pointer-events: auto;
-        }
-        .topbar-brand {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: rgba(255,255,255,0.85);
-            -webkit-backdrop-filter: blur(12px);
-            backdrop-filter: blur(12px);
-            padding: 10px 18px;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow);
-            font-weight: 700;
-            font-size: 15px;
-            color: var(--text);
-            border: 1px solid rgba(255,255,255,0.5);
-        }
-        .topbar-brand .logo {
-            width: 32px; height: 32px;
-            background: var(--primary);
-            border-radius: var(--radius-sm);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 16px;
-            flex-shrink: 0;
-            box-shadow: 0 2px 6px rgba(37,99,235,0.3);
-        }
+        .topbar > * { pointer-events: auto; }
         .topbar-right {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
         .topbar-pill {
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 8px;
-            background: rgba(255,255,255,0.85);
-            -webkit-backdrop-filter: blur(12px);
-            backdrop-filter: blur(12px);
-            padding: 9px 16px;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow);
-            font-size: 13px;
+            gap: 6px;
+            background: rgba(255,255,255,0.7);
+            -webkit-backdrop-filter: blur(16px) saturate(150%);
+            backdrop-filter: blur(16px) saturate(150%);
+            padding: 6px 12px;
+            border-radius: 100px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            font-size: 12px;
+            font-weight: 500;
             color: var(--text-secondary);
-            border: 1px solid rgba(255,255,255,0.5);
+            border: 1px solid rgba(255,255,255,0.6);
+            transition: all var(--transition);
+        }
+        .topbar-pill:hover {
+            background: rgba(255,255,255,0.9);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .topbar-pill svg {
+            opacity: 0.5;
+            flex-shrink: 0;
+        }
+        .topbar-pill-accent {
+            background: rgba(37,99,235,0.12);
+            border-color: rgba(37,99,235,0.2);
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .topbar-pill-accent:hover {
+            background: rgba(37,99,235,0.18);
+        }
+        .topbar-pill-accent svg {
+            opacity: 0.8;
         }
 
         /* ========== Point List Panel ========== */
@@ -513,9 +507,8 @@
             .point-list-panel { width: 240px; left: 6px; top: 70px; bottom: 28px; }
             .point-list-name { font-size: 13px; }
             .point-list-loc { font-size: 10px; }
-            .topbar { top: 6px; left: 6px; right: 6px; }
-            .topbar-brand { font-size: 13px; padding: 7px 12px; }
-            .topbar-pill { padding: 7px 10px; font-size: 12px; }
+            .topbar { top: 8px; right: 8px; }
+            .topbar-pill { padding: 5px 10px; font-size: 11px; }
         }
     </style>
 </head>
@@ -545,14 +538,17 @@
 
 <!-- ===== Top Bar ===== -->
 <div class="topbar">
-        <div class="topbar-right">
+    <div class="topbar-right">
         <div class="topbar-pill" id="userPill">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             <span id="userInfo"></span>
         </div>
-        <div class="topbar-pill">
-            <a href="/datav/" target="_blank" class="btn-link" style="font-size:13px;">运维管理</a>
-        </div>
+        <a href="/datav/" target="_blank" class="topbar-pill topbar-pill-accent" style="text-decoration:none;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            运维管理
+        </a>
     </div>
+</div>
 </div>
 
 <!-- ===== Login Hint ===== -->
@@ -716,21 +712,26 @@
         });
         map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50] });
 
-        // 按时序画动态流水线：从最早流向最新
+        // 时序流水线：3层玻璃体反光效果
         const timed = filtered
             .filter(f => f.properties.created_at)
             .sort((a, b) => new Date(a.properties.created_at).getTime() - new Date(b.properties.created_at).getTime());
         if (timed.length >= 2) {
             const latlngs = timed.map(f => [f.geometry.coordinates[1], f.geometry.coordinates[0]]);
-            const flowLine = L.polyline(latlngs, {
-                color: '#3B82F6',
-                weight: 3,
-                opacity: 0.7,
+            // 第1层：外发光（宽、半透明）
+            const glow = L.polyline(latlngs, {
+                color: '#3B82F6', weight: 6, opacity: 0.25,
             }).addTo(timelineLayer);
-            // 添加流动动画
-            if (flowLine._path) {
-                flowLine._path.classList.add('flow-line');
-            }
+            if (glow._path) glow._path.classList.add('flow-glow');
+            // 第2层：主体线
+            L.polyline(latlngs, {
+                color: '#2563EB', weight: 2.5, opacity: 0.8,
+            }).addTo(timelineLayer);
+            // 第3层：流动高光
+            const highlight = L.polyline(latlngs, {
+                color: '#93C5FD', weight: 1.5, opacity: 0.9,
+            }).addTo(timelineLayer);
+            if (highlight._path) highlight._path.classList.add('flow-highlight');
         }
     }
 
