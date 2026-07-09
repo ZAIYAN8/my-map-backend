@@ -585,20 +585,19 @@
 
 <script>
     // ===== Map Setup =====
+    // 空白透明瓦片（避免缺瓦片时显示错误图）
+    const BLANK_TILE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
     const esriImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Esri',
-        maxNativeZoom: 19, maxZoom: 22
+        attribution: 'Esri', maxNativeZoom: 19, maxZoom: 22, errorTileUrl: BLANK_TILE
     });
     const esriStreet = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Esri, HERE, Garmin',
-        maxNativeZoom: 19, maxZoom: 22
+        attribution: 'Esri, HERE, Garmin', maxNativeZoom: 18, maxZoom: 22, errorTileUrl: BLANK_TILE
     });
     const osmChinese = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: 'OpenStreetMap',
-        maxNativeZoom: 19, maxZoom: 22,
+        attribution: 'OpenStreetMap', maxNativeZoom: 18, maxZoom: 22, errorTileUrl: BLANK_TILE
     });
     const baseMaps = { "卫星影像": esriImagery, "电子地图": esriStreet, "中文地图": osmChinese };
-    const map = L.map('map', { layers: [esriImagery], maxZoom: 18, minZoom: 3 }).setView([25.78912, 100.195062], 10);
+    const map = L.map('map', { layers: [esriImagery], maxZoom: 22, minZoom: 3 }).setView([25.78912, 100.195062], 10);
     L.control.layers(baseMaps, null, { position: 'bottomright' }).addTo(map);
 
 
