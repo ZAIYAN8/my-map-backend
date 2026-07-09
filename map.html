@@ -813,15 +813,25 @@
         if (latlng) {
             map.setView(latlng, map.getMaxZoom(), { animate: true, duration: 0.5 });
         }
-        const imgUrl = props.image_url || '';
-        const imgSection = imgUrl
+        const images = props.images || [];
+        const imgSection = images.length > 0
             ? `<div class="panel-img-container" id="imgContainer">
-                <button type="button" class="panel-img-btn" data-img="${escHtml(imgUrl)}" onclick="loadPanelImage(this)">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                    点击查看图片
-                </button>
+                ${images.map((img, idx) => `
+                <div style="margin-bottom:6px;">
+                    <button type="button" class="panel-img-btn" data-img="${escHtml(img.url)}" onclick="loadPanelImage(this)" style="padding:14px 20px;font-size:12px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        查看图片 ${idx + 1}
+                    </button>
+                </div>`).join('')}
                </div>`
-            : '';
+            : (props.image_url
+                ? `<div class="panel-img-container" id="imgContainer">
+                    <button type="button" class="panel-img-btn" data-img="${escHtml(props.image_url)}" onclick="loadPanelImage(this)">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        点击查看图片
+                    </button>
+                   </div>`
+                : '');
 
         const timeStr = props.created_at ? new Date(props.created_at).toLocaleString('zh-CN') : '';
         document.getElementById('panelTitle').textContent = (props.marker_icon || '📍') + ' ' + (props.name || '未命名');
@@ -841,17 +851,29 @@
         openPanel();
     }
 
+    const imageCache = {};
     function loadPanelImage(btn) {
         const url = btn.getAttribute('data-img');
         if (!url) return;
+        const container = document.getElementById('imgContainer');
+        if (imageCache[url]) {
+            btn.remove();
+            const cached = imageCache[url].cloneNode(true);
+            cached.style.display = 'block';
+            container.appendChild(cached);
+            return;
+        }
         btn.disabled = true;
         btn.textContent = '加载中...';
-        const container = document.getElementById('imgContainer');
         const img = document.createElement('img');
         img.className = 'panel-img';
         img.style.display = 'none';
         img.src = url;
-        img.onload = () => { img.style.display = 'block'; btn.remove(); };
+        img.onload = () => {
+            img.style.display = 'block';
+            imageCache[url] = img.cloneNode(true);
+            btn.remove();
+        };
         img.onerror = () => {
             btn.remove();
             const err = document.createElement('span');
