@@ -597,6 +597,14 @@
     const map = L.map('map', { layers: [esriImagery], maxZoom: 18, minZoom: 3 }).setView([25.78912, 100.195062], 10);
     L.control.layers(baseMaps, null, { position: 'bottomright' }).addTo(map);
 
+    // 行政区名称标签（CartoDB 标注图层，叠加在卫星图上）
+    const labelLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+        attribution: 'CartoDB',
+        maxZoom: 18,
+        opacity: 0.75,
+        pane: 'overlayPane',
+    }).addTo(map);
+
     const markersLayer = L.layerGroup().addTo(map);
     const timelineLayer = L.layerGroup().addTo(map);
     let allPointsData = [];
@@ -852,17 +860,34 @@
         openPanel();
     }
 
+    // 图片缓存：同一次会话中已加载的不再重复下载
+    const imageCache = {};
+
     function loadPanelImage(btn) {
         const url = btn.getAttribute('data-img');
         if (!url) return;
+        const container = document.getElementById('imgContainer');
+
+        // 已缓存 → 直接显示
+        if (imageCache[url]) {
+            const cached = imageCache[url].cloneNode(true);
+            cached.style.display = 'block';
+            container.appendChild(cached);
+            btn.remove();
+            return;
+        }
+
         btn.disabled = true;
         btn.textContent = '加载中...';
-        const container = document.getElementById('imgContainer');
         const img = document.createElement('img');
         img.className = 'panel-img';
         img.style.display = 'none';
         img.src = url;
-        img.onload = () => { img.style.display = 'block'; btn.remove(); };
+        img.onload = () => {
+            img.style.display = 'block';
+            imageCache[url] = img.cloneNode(true); // 缓存副本
+            btn.remove();
+        };
         img.onerror = () => {
             btn.remove();
             const err = document.createElement('span');
