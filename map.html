@@ -585,21 +585,17 @@
 
 <script>
     // ===== Map Setup =====
-    // 空白透明瓦片（避免缺瓦片时显示错误图）
-    const BLANK_TILE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
     const esriImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Esri', maxNativeZoom: 19, maxZoom: 22, errorTileUrl: BLANK_TILE
+        attribution: 'Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP',
+        maxZoom: 18
     });
     const esriStreet = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Esri, HERE, Garmin', maxNativeZoom: 18, maxZoom: 22, errorTileUrl: BLANK_TILE
+        attribution: 'Esri, HERE, Garmin, USGS',
+        maxZoom: 18
     });
-    const osmChinese = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: 'OpenStreetMap', maxNativeZoom: 18, maxZoom: 22, errorTileUrl: BLANK_TILE
-    });
-    const baseMaps = { "卫星影像": esriImagery, "电子地图": esriStreet, "中文地图": osmChinese };
-    const map = L.map('map', { layers: [esriImagery], maxZoom: 22, minZoom: 3 }).setView([25.78912, 100.195062], 10);
+    const baseMaps = { "卫星影像": esriImagery, "电子地图": esriStreet };
+    const map = L.map('map', { layers: [esriImagery], maxZoom: 18, minZoom: 3 }).setView([25.78912, 100.195062], 10);
     L.control.layers(baseMaps, null, { position: 'bottomright' }).addTo(map);
-
 
     const markersLayer = L.layerGroup().addTo(map);
     const timelineLayer = L.layerGroup().addTo(map);
@@ -817,26 +813,15 @@
         if (latlng) {
             map.setView(latlng, map.getMaxZoom(), { animate: true, duration: 0.5 });
         }
-        const images = props.images || [];
-        const coverUrl = props.image_url || (images.length > 0 ? images[0].url : '');
-        const imgSection = images.length > 0
+        const imgUrl = props.image_url || '';
+        const imgSection = imgUrl
             ? `<div class="panel-img-container" id="imgContainer">
-                ${images.map((img, idx) => `
-                <div style="margin-bottom:8px;">
-                    <button type="button" class="panel-img-btn" data-img="${escHtml(img.url)}" onclick="loadPanelImage(this)" style="padding:16px 24px;font-size:13px;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                        查看图片 ${idx + 1}
-                    </button>
-                </div>`).join('')}
+                <button type="button" class="panel-img-btn" data-img="${escHtml(imgUrl)}" onclick="loadPanelImage(this)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    点击查看图片
+                </button>
                </div>`
-            : (coverUrl
-                ? `<div class="panel-img-container" id="imgContainer">
-                    <button type="button" class="panel-img-btn" data-img="${escHtml(coverUrl)}" onclick="loadPanelImage(this)">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                        点击查看图片
-                    </button>
-                   </div>`
-                : '');
+            : '';
 
         const timeStr = props.created_at ? new Date(props.created_at).toLocaleString('zh-CN') : '';
         document.getElementById('panelTitle').textContent = (props.marker_icon || '📍') + ' ' + (props.name || '未命名');
@@ -856,34 +841,17 @@
         openPanel();
     }
 
-    // 图片缓存：同一次会话中已加载的不再重复下载
-    const imageCache = {};
-
     function loadPanelImage(btn) {
         const url = btn.getAttribute('data-img');
         if (!url) return;
-        const container = document.getElementById('imgContainer');
-
-        // 已缓存 → 直接显示
-        if (imageCache[url]) {
-            const cached = imageCache[url].cloneNode(true);
-            cached.style.display = 'block';
-            container.appendChild(cached);
-            btn.remove();
-            return;
-        }
-
         btn.disabled = true;
         btn.textContent = '加载中...';
+        const container = document.getElementById('imgContainer');
         const img = document.createElement('img');
         img.className = 'panel-img';
         img.style.display = 'none';
         img.src = url;
-        img.onload = () => {
-            img.style.display = 'block';
-            imageCache[url] = img.cloneNode(true); // 缓存副本
-            btn.remove();
-        };
+        img.onload = () => { img.style.display = 'block'; btn.remove(); };
         img.onerror = () => {
             btn.remove();
             const err = document.createElement('span');
