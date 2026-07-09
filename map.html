@@ -41,6 +41,8 @@
         /* ========== Map Container ========== */
         #map { height: 100vh; width: 100%; z-index: 1; }
         .emoji-marker { background: none !important; border: none !important; }
+        /* OSM 瓦片：白底变透明，只留深色文字路网 */
+        .osm-blend { mix-blend-mode: multiply; filter: brightness(1.6) contrast(1.3); }
 
         @keyframes sparkleDash {
             to { stroke-dashoffset: -28; }
@@ -597,12 +599,17 @@
     const map = L.map('map', { layers: [esriImagery], maxZoom: 18, minZoom: 3 }).setView([25.78912, 100.195062], 10);
     L.control.layers(baseMaps, null, { position: 'bottomright' }).addTo(map);
 
-    // 中文地名标注（高德路网，叠加在卫星图上）
-    const labelLayer = L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
-        subdomains: '1234',
+    // 中文地名标注（ESRI Reference + OSM，WGS-84 对齐）
+    // ESRI 边界和地名参考图层（透明底）
+    const esriLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 18,
-        opacity: 0.65,
-        pane: 'overlayPane',
+        opacity: 0.55,
+    }).addTo(map);
+    // OSM 瓦片作 multiply 混合（白底变透明，仅留深色文字路网）
+    const osmOverlay = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        opacity: 0.7,
+        className: 'osm-blend',
     }).addTo(map);
 
     const markersLayer = L.layerGroup().addTo(map);
