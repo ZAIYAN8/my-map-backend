@@ -597,11 +597,11 @@
     const map = L.map('map', { layers: [esriImagery], maxZoom: 18, minZoom: 3 }).setView([25.78912, 100.195062], 10);
     L.control.layers(baseMaps, null, { position: 'bottomright' }).addTo(map);
 
-    // 行政区名称标签（CartoDB 标注图层，叠加在卫星图上）
-    const labelLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
-        attribution: 'CartoDB',
+    // 中文地名标注（高德路网，叠加在卫星图上）
+    const labelLayer = L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+        subdomains: '1234',
         maxZoom: 18,
-        opacity: 0.75,
+        opacity: 0.65,
         pane: 'overlayPane',
     }).addTo(map);
 
